@@ -34,29 +34,40 @@
 ```
 📦 .
 ├── 📂 assets                    # Project assets (e.g. images, logos)
+├── 📂 data                      # Data files
 ├── 📂 docs                      # Project documentation
 │   └── 📜 git-workflow.md       # Guide for Git collaboration
+├── 📂 logs                      # Log files
 ├── 📂 notebooks                 # Jupyter notebooks for experimentation
 ├── 📂 scripts                   # Utility scripts
 ├── 📂 src                       # Source code
-│   └── 📂 deep_research         # Main application package (example)
-│       ├── __init__.py
-│       └── ...                  # Other modules and sub-packages
+│   ├── __init__.py
+│   ├── agent.py
+│   ├── config.py
+│   ├── embeddings.py
+│   ├── knowledge_base.py
+│   ├── prompts.py
+│   ├── rewards.py
+│   ├── search_module.py
+│   ├── tools.py
+│   └── utils.py
 ├── 📂 tests                     # Test suites
 ├── 📂 third_party               # Third-party libraries or code
 ├── 📜 .gitignore                # Files and directories to be ignored by Git
 ├── 📜 .python-version           # Specifies Python version for pyenv
 ├── 📜 Makefile                  # Makefile for common development tasks
 ├── 📜 README.md                 # This file
-├── 📜 main.py                   # Main entry point for the application (example)
-├── 📜 pyproject.toml            # Project metadata and dependencies for Poetry/PEP 621 build systems
+├── 📜 pyproject.toml            # Project metadata and dependencies
 └── 📜 uv.lock                   # Lock file for uv package manager
 ```
 
 ## Development
 
 - Follow the Git workflow outlined in [docs/git-workflow.md](docs/git-workflow.md).
-- Use the `Makefile` for common tasks (e.g., `make lint`, `make test`). *Please update `Makefile` usage instructions as per its actual commands.*
+- Use the `Makefile` for common tasks. For example:
+    - To prepare data: `make data`
+    - To run tests: `make test`
+    - To lint your code: `make lint`
 
 ---
 
