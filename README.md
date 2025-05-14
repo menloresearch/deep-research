@@ -69,6 +69,69 @@
     - To run tests: `make test`
     - To lint your code: `make lint`
 
+## Simple Retrieval Server
+
+A lightweight FastAPI-based server for performing semantic search using the pre-built FAISS index from this project. This server is located in `src/search/`.
+
+### Prerequisites
+
+Ensure you have the necessary dependencies installed. If you are using `uv`, you might need to add FastAPI, Uvicorn, and Pydantic:
+
+```bash
+uv pip install fastapi "pydantic[email]" uvicorn
+# Ensure other dependencies from knowledge_base.py (langchain, faiss, etc.) are also installed.
+```
+
+### Running the Server
+
+You can run the server using the Makefile target:
+
+```bash
+make run-simple-retrieval-server
+```
+
+For development with auto-reload:
+
+```bash
+make run-simple-retrieval-server-dev
+```
+
+The server will start on `http://localhost:8001` by default (or the port specified by the `SIMPLE_RETRIEVAL_PORT` environment variable if set, though `Makefile` commands explicitly set the port). API documentation (Swagger UI) will be available at `http://localhost:<port>/docs`.
+
+### Testing the Server
+
+A client script is provided at `src/search/retrieval_request.py` to test the `/retrieve` endpoint.
+
+**Usage:**
+
+```bash
+python src/search/retrieval_request.py "your search query here" -k 5 --host localhost --port 8001
+```
+
+**Parameters:**
+
+- `query`: (Required) The search query string.
+- `-k`: (Optional) Number of results to retrieve. Defaults to the server's configured `RAG_SEARCH_RESULTS_COUNT`.
+- `--host`: (Optional) Server host. Defaults to `localhost`.
+- `--port`: (Optional) Server port. Defaults to `8001`.
+
+Example:
+
+```bash
+python src/search/retrieval_request.py "what are transformers in NLP?" -k 3
+```
+
+You can also use `curl`:
+
+```bash
+curl -X POST "http://localhost:8001/retrieve" \
+-H "Content-Type: application/json" \
+-d '{
+  "query": "your search query here",
+  "k": 5
+}'
+```
+
 ---
 
 *This is a simplified README. Please adapt it to your project's specifics, especially regarding the `Makefile` commands.*

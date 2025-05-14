@@ -48,3 +48,15 @@ data:
 	$(PYTHON_INTERPRETER) scripts/prepare_train_data/prepare_musique_dev_jsonl.py
 	@echo "Processed Musique DEV JSONL ready in ./data/processed/questions_dev.jsonl"
 	@echo "All Musique data preparation steps completed."
+
+# Target to run the new simple retrieval server
+run-simple-retrieval-server:
+	@echo "Starting the simple retrieval server on port 8001..."
+	@echo "Access the API docs at http://localhost:8001/docs"
+	PYTHONPATH=. uvicorn src.search.retrieval_server:app --host 0.0.0.0 --port 8001
+
+# Example: run simple retrieval server with reload for development
+run-simple-retrieval-server-dev:
+	@echo "Starting the simple retrieval server with reload on port 8001..."
+	@echo "Access the API docs at http://localhost:8001/docs"
+	PYTHONPATH=. uvicorn src.search.retrieval_server:app --host 0.0.0.0 --port 8001 --reload
