@@ -3,6 +3,7 @@
 data/
 logs/
 models/
+docs_for_ai/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

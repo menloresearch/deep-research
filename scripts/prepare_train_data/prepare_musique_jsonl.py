@@ -4,7 +4,9 @@ from collections import defaultdict
 from pathlib import Path
 
 
-def transform_musique_data(input_path: str, output_path: str, sample_config: dict) -> None:
+def transform_musique_data(
+    input_path: str, output_path: str, sample_config: dict
+) -> None:
     """Transforms Musique data with deterministic stratified sampling using uniform selection from sorted lists.
 
     Reads data, categorizes by detailed hop type, sorts categories by ID,
@@ -30,9 +32,13 @@ def transform_musique_data(input_path: str, output_path: str, sample_config: dic
                     if "id" in data:
                         all_data.append(data)
                     else:
-                        print(f"Warning: Skipping line {line_num} due to missing 'id' field in {input_path}")
+                        print(
+                            f"Warning: Skipping line {line_num} due to missing 'id' field in {input_path}"
+                        )
                 except json.JSONDecodeError:
-                    print(f"Warning: Skipping invalid JSON in line {line_num} of {input_path}")
+                    print(
+                        f"Warning: Skipping invalid JSON in line {line_num} of {input_path}"
+                    )
     except FileNotFoundError:
         print(f"Error: Input file not found at {input_path}")
         return
@@ -56,11 +62,15 @@ def transform_musique_data(input_path: str, output_path: str, sample_config: dic
     # Deterministic sampling using sorting and uniform index selection
     final_sample_list = []
     total_target = sum(sample_config.values())
-    print(f"Sampling deterministically via uniform selection from sorted lists to get {total_target} samples...")
+    print(
+        f"Sampling deterministically via uniform selection from sorted lists to get {total_target} samples..."
+    )
     # Check if all requested hop types exist in config
     for hop_type in sample_config.keys():
         if hop_type not in categorized_data:
-            print(f"Warning: Hop type '{hop_type}' requested in config but not found in data.")
+            print(
+                f"Warning: Hop type '{hop_type}' requested in config but not found in data."
+            )
 
     for hop_type, target_count in sample_config.items():
         available_samples = categorized_data.get(hop_type, [])
@@ -75,13 +85,19 @@ def transform_musique_data(input_path: str, output_path: str, sample_config: dic
 
         selected_samples_for_hop = []
         if current_count < target_count:
-            print(f"  Warning: Not enough samples for {hop_type}. Taking all {current_count} sorted samples.")
+            print(
+                f"  Warning: Not enough samples for {hop_type}. Taking all {current_count} sorted samples."
+            )
             selected_samples_for_hop = available_samples
         else:
             # Select target_count indices spread uniformly across the available samples
-            print(f"  Selecting {target_count} samples uniformly from {current_count}...")
+            print(
+                f"  Selecting {target_count} samples uniformly from {current_count}..."
+            )
             # Calculate indices using integer interpretation of evenly spaced points
-            indices_to_take = [int(i * current_count / target_count) for i in range(target_count)]
+            indices_to_take = [
+                int(i * current_count / target_count) for i in range(target_count)
+            ]
             # Ensure uniqueness in case of rounding issues with small numbers (though unlikely here)
             indices_to_take = sorted(list(set(indices_to_take)))
             # Adjust if rounding resulted in fewer than target_count unique indices
@@ -110,21 +126,31 @@ def transform_musique_data(input_path: str, output_path: str, sample_config: dic
     print("Final sample list constructed in order (hop type, then ID).")
 
     # Process and write the selected samples
-    print(f"Processing and writing {len(final_sample_list)} selected samples to {output_path}...")
+    print(
+        f"Processing and writing {len(final_sample_list)} selected samples to {output_path}..."
+    )
     count = 0
     try:
         with open(output_path, "w", encoding="utf-8") as outfile:
             for data in final_sample_list:
                 try:
                     supporting_paragraphs = [
-                        p["paragraph_text"] for p in data.get("paragraphs", []) if p.get("is_supporting", False)
+                        p["paragraph_text"]
+                        for p in data.get("paragraphs", [])
+                        if p.get("is_supporting", False)
                     ]
 
                     main_answer = data.get("answer", "")
                     aliases = data.get("answer_aliases", [])
 
-                    all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
-                    valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
+                    all_answers = [main_answer] + (
+                        aliases if isinstance(aliases, list) else []
+                    )
+                    valid_answers = [
+                        str(ans).strip()
+                        for ans in all_answers
+                        if ans and str(ans).strip()
+                    ]
                     unique_valid_answers = list(set(valid_answers))
 
                     combined_answer_str = " OR ".join(unique_valid_answers)
@@ -160,7 +186,9 @@ if __name__ == "__main__":
     }  # Total = 1000
 
     transform_musique_data(
-        str(RAW_DIR / "musique_ans_v1.0_train.jsonl"), str(PROCESSED_DIR / "questions.jsonl"), SAMPLING_CONFIG
+        str(RAW_DIR / "musique_ans_v1.0_train.jsonl"),
+        str(PROCESSED_DIR / "questions.jsonl"),
+        SAMPLING_CONFIG,
     )
 
     print(

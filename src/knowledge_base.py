@@ -29,7 +29,9 @@ def load_vectorstore(force_reload: bool = False) -> Optional[FAISS]:
         # faiss_index_path = PROCESSED_DATA_DIR / "faiss_index"  # Standardize index folder name
         # Corrected path: FAISS index files are directly in PROCESSED_DATA_DIR
         faiss_index_path = PROCESSED_DATA_DIR
-        if not faiss_index_path.exists():  # This check might need adjustment if just a path, not a dir
+        if (
+            not faiss_index_path.exists()
+        ):  # This check might need adjustment if just a path, not a dir
             logger.error(f"FAISS index directory/path not found at: {faiss_index_path}")
             _vectorstore = None
             return None
@@ -49,7 +51,9 @@ def load_vectorstore(force_reload: bool = False) -> Optional[FAISS]:
         return None
 
 
-def simple_rag_search(query: str, k: int = RAG_SEARCH_RESULTS_COUNT) -> List[Dict[str, Any]]:
+def simple_rag_search(
+    query: str, k: int = RAG_SEARCH_RESULTS_COUNT
+) -> List[Dict[str, Any]]:
     """
     Search for relevant chunks using similarity search.
     Returns a list of dictionaries, each with 'content' and 'metadata'.
@@ -81,7 +85,9 @@ def simple_rag_search(query: str, k: int = RAG_SEARCH_RESULTS_COUNT) -> List[Dic
         return []
 
 
-def load_qa_data(questions_path: Optional[str] = None, force_reload: bool = False) -> Optional[List[Dict]]:
+def load_qa_data(
+    questions_path: Optional[str] = None, force_reload: bool = False
+) -> Optional[List[Dict]]:
     """Load the pre-generated questions from a JSONL file."""
     global _questions_data
     if _questions_data is not None and not force_reload:
@@ -140,7 +146,9 @@ def get_qa_dataset(
     """
     global _questions_data
     current_qa_data = _questions_data
-    if questions_path is not None or current_qa_data is None:  # Load specific path or if not loaded
+    if (
+        questions_path is not None or current_qa_data is None
+    ):  # Load specific path or if not loaded
         current_qa_data = load_qa_data(questions_path)
 
     if not current_qa_data:
@@ -153,10 +161,15 @@ def get_qa_dataset(
         qa_dataset = qa_dataset.shuffle(seed=seed)
 
     # Ensure 'prompt' column exists for consistency, renaming 'question'
-    if "question" in qa_dataset.column_names and "prompt" not in qa_dataset.column_names:
+    if (
+        "question" in qa_dataset.column_names
+        and "prompt" not in qa_dataset.column_names
+    ):
         qa_dataset = qa_dataset.rename_column("question", "prompt")
     elif "prompt" not in qa_dataset.column_names:
-        logger.warning("Dataset does not have 'question' or 'prompt' column. Trainer might fail.")
+        logger.warning(
+            "Dataset does not have 'question' or 'prompt' column. Trainer might fail."
+        )
 
     empty_dataset = Dataset.from_list([])
     if test_size <= 0:  # Train only

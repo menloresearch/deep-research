@@ -129,14 +129,19 @@ def test_click_and_fetch_tool_instantiation() -> None:
 
 def test_click_and_fetch_tool_get_schema() -> None:
     tool = ClickAndFetchTool()
-    assert tool.get_schema() == f"{BEGIN_CLICK_LINK}URL_to_fetch_and_summarize{END_CLICK_LINK}"
+    assert (
+        tool.get_schema()
+        == f"{BEGIN_CLICK_LINK}URL_to_fetch_and_summarize{END_CLICK_LINK}"
+    )
 
 
 def test_click_and_fetch_tool_execute_simple() -> None:
     tool = ClickAndFetchTool()
     output = tool.execute("http://example.com")
     assert isinstance(output, str)
-    assert "Summary of content from http://example.com (stubbed)" in output  # Checks stubbed response
+    assert (
+        "Summary of content from http://example.com (stubbed)" in output
+    )  # Checks stubbed response
 
 
 def test_click_and_fetch_tool_execute_no_url() -> None:

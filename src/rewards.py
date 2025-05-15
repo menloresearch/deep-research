@@ -67,7 +67,9 @@ def reward_format(prompts: list, completions: list, **reward_kwargs) -> list:
 
     for completion in completions:
         messages = completion.get("messages", [])
-        assistant_msgs = [msg["content"] for msg in messages if msg["role"] == "assistant"]
+        assistant_msgs = [
+            msg["content"] for msg in messages if msg["role"] == "assistant"
+        ]
 
         if not assistant_msgs:
             rewards.append(0.0)
@@ -79,10 +81,14 @@ def reward_format(prompts: list, completions: list, **reward_kwargs) -> list:
 
         # Check if content ends with </search> or </answer> (ignoring whitespace)
         content_stripped = content.strip()
-        ends_properly = content_stripped.endswith(END_SEARCH) or content_stripped.endswith(END_ANSWER)
+        ends_properly = content_stripped.endswith(
+            END_SEARCH
+        ) or content_stripped.endswith(END_ANSWER)
         validation_results["ends_properly"].append(ends_properly)
 
-        has_invalid_tags = any(re.search(pattern, content) for pattern in invalid_patterns)
+        has_invalid_tags = any(
+            re.search(pattern, content) for pattern in invalid_patterns
+        )
         validation_results["has_invalid_tags"].append(has_invalid_tags)
         if has_invalid_tags:
             rewards.append(0.0)
@@ -131,7 +137,9 @@ def reward_format(prompts: list, completions: list, **reward_kwargs) -> list:
                 continue
 
         # Only reward if format is valid AND response ends properly
-        reward = 1.0 if has_think and (has_answer or has_search) and ends_properly else 0.0
+        reward = (
+            1.0 if has_think and (has_answer or has_search) and ends_properly else 0.0
+        )
         rewards.append(reward)
 
         if not reward:
@@ -141,7 +149,11 @@ def reward_format(prompts: list, completions: list, **reward_kwargs) -> list:
             if search_matches:
                 logger.debug(f"Number of search tags: {len(search_matches)}")
 
-    logger.info(f"Format reward metrics - Mean: {np.mean(rewards):.3f}, Valid formats: {sum(rewards)}/{len(rewards)}")
-    logger.info(f"Responses ending properly: {sum(validation_results['ends_properly'])}/{len(rewards)}")
+    logger.info(
+        f"Format reward metrics - Mean: {np.mean(rewards):.3f}, Valid formats: {sum(rewards)}/{len(rewards)}"
+    )
+    logger.info(
+        f"Responses ending properly: {sum(validation_results['ends_properly'])}/{len(rewards)}"
+    )
 
     return rewards

@@ -7,7 +7,9 @@ from collections import defaultdict
 from pathlib import Path
 
 
-def transform_musique_dev_data(input_path: str, output_path: str, sample_config: dict) -> None:
+def transform_musique_dev_data(
+    input_path: str, output_path: str, sample_config: dict
+) -> None:
     """Transforms Musique dev data with deterministic stratified sampling using uniform selection from sorted lists.
 
     Reads dev data, categorizes by hop type (2, 3, 4), sorts categories by ID,
@@ -34,9 +36,13 @@ def transform_musique_dev_data(input_path: str, output_path: str, sample_config:
                     if "id" in data:
                         all_data.append(data)
                     else:
-                        print(f"Warning: Skipping line {line_num} due to missing 'id' field in {input_path}")
+                        print(
+                            f"Warning: Skipping line {line_num} due to missing 'id' field in {input_path}"
+                        )
                 except json.JSONDecodeError:
-                    print(f"Warning: Skipping invalid JSON in line {line_num} of {input_path}")
+                    print(
+                        f"Warning: Skipping invalid JSON in line {line_num} of {input_path}"
+                    )
     except FileNotFoundError:
         print(f"Error: Input file not found at {input_path}")
         return
@@ -64,7 +70,9 @@ def transform_musique_dev_data(input_path: str, output_path: str, sample_config:
     # Deterministic sampling using sorting and uniform index selection
     final_sample_list = []
     total_target = sum(sample_config.values())
-    print(f"Sampling deterministically via uniform selection from sorted lists to get {total_target} dev samples...")
+    print(
+        f"Sampling deterministically via uniform selection from sorted lists to get {total_target} dev samples..."
+    )
 
     for hop_type, target_count in sample_config.items():
         available_samples = categorized_data.get(hop_type, [])
@@ -77,18 +85,29 @@ def transform_musique_dev_data(input_path: str, output_path: str, sample_config:
         available_samples.sort(key=lambda x: x["id"])
         selected_samples_for_hop = []
         if current_count < target_count:
-            print(f"  Warning: Not enough samples for {hop_type}. Taking all {current_count} sorted samples.")
+            print(
+                f"  Warning: Not enough samples for {hop_type}. Taking all {current_count} sorted samples."
+            )
             selected_samples_for_hop = available_samples
         elif target_count > 0:  # Ensure target_count is positive before selecting
-            print(f"  Selecting {target_count} samples uniformly from {current_count}...")
+            print(
+                f"  Selecting {target_count} samples uniformly from {current_count}..."
+            )
             # Calculate indices using integer interpretation of evenly spaced points
             indices_to_take = [
-                int(i * (current_count - 1) / (target_count - 1)) if target_count > 1 else 0
+                int(i * (current_count - 1) / (target_count - 1))
+                if target_count > 1
+                else 0
                 for i in range(target_count)
             ]  # Adjust index calc for edges
-            indices_to_take = sorted(list(set(indices_to_take)))  # Ensure unique indices
+            indices_to_take = sorted(
+                list(set(indices_to_take))
+            )  # Ensure unique indices
             # Simple fallback if uniqueness reduced count below target
-            while len(indices_to_take) < target_count and len(indices_to_take) < current_count:
+            while (
+                len(indices_to_take) < target_count
+                and len(indices_to_take) < current_count
+            ):
                 next_val = indices_to_take[-1] + 1
                 if next_val < current_count:
                     indices_to_take.append(next_val)
@@ -109,20 +128,32 @@ def transform_musique_dev_data(input_path: str, output_path: str, sample_config:
     print("Final dev sample list constructed in order (hop type, then ID).")
 
     # Process and write the selected samples
-    print(f"Processing and writing {len(final_sample_list)} selected dev samples to {output_path}...")
+    print(
+        f"Processing and writing {len(final_sample_list)} selected dev samples to {output_path}..."
+    )
     count = 0
     try:
         with open(output_path, "w", encoding="utf-8") as outfile:
             for data in final_sample_list:
                 try:
                     supporting_paragraphs = [
-                        p["paragraph_text"] for p in data.get("paragraphs", []) if p.get("is_supporting", False)
+                        p["paragraph_text"]
+                        for p in data.get("paragraphs", [])
+                        if p.get("is_supporting", False)
                     ]
                     main_answer = data.get("answer", "")
                     aliases = data.get("answer_aliases", [])
-                    all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
-                    valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
-                    unique_valid_answers = list(set(valid_answers))  # Keep unique, don't sort alphabetically
+                    all_answers = [main_answer] + (
+                        aliases if isinstance(aliases, list) else []
+                    )
+                    valid_answers = [
+                        str(ans).strip()
+                        for ans in all_answers
+                        if ans and str(ans).strip()
+                    ]
+                    unique_valid_answers = list(
+                        set(valid_answers)
+                    )  # Keep unique, don't sort alphabetically
                     combined_answer_str = " OR ".join(unique_valid_answers)
 
                     output_data = {

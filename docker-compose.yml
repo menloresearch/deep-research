@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  mock_retriever:
+    build:
+      context: .
+      dockerfile: deploy/docker/mock_retriever.Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - MOCK_RETRIEVER_PORT=8003
+      - HOST=0.0.0.0
+      # - PYTHONPATH=/app # Already set in Dockerfile
+    volumes:
+      - ./src:/app/src  # Optional: For live reloading of src code during development
+      - ./deploy/serving/serve_mock_retriever.py:/app/deploy/serving/serve_mock_retriever.py # Optional: For live reloading
+    # For development with auto-reload, uncomment the command below and comment out CMD in Dockerfile
+    # command: uvicorn deploy.serving.serve_mock_retriever:app --host 0.0.0.0 --port 8003 --reload
+
+  simple_retriever:
+    build:
+      context: .
+      dockerfile: deploy/docker/simple_retriever.Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - SIMPLE_RETRIEVER_PORT=8002
+      - HOST=0.0.0.0
+    volumes:
+      - ./src:/app/src
+      - ./deploy/serving/serve_simple_retriever.py:/app/deploy/serving/serve_simple_retriever.py
+    # command: uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002 --reload
+
+  flashrag_retriever:
+    build:
+      context: .
+      dockerfile: deploy/docker/flashrag_retriever.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - FLASHRAG_RETRIEVER_PORT=8001
+      - HOST=0.0.0.0
+      - RETRIEVER_CONFIG_PATH=/app/deploy/serving/retriever_config.yaml
+    volumes:
+      - ./src:/app/src
+      - ./deploy/serving/serve_flashrag_retriever.py:/app/deploy/serving/serve_flashrag_retriever.py
+      - ./deploy/serving/retriever_config.yaml:/app/deploy/serving/retriever_config.yaml # Mount config for potential local changes
+    # command: python deploy.serving.serve_flashrag_retriever.py --host 0.0.0.0 --port 8001 --config /app/deploy/serving/retriever_config.yaml --reload # Uvicorn reload flag for python script needs to be handled by uvicorn.run call in script.
+    # If you want reload with the python CMD, you might need to pass a reload flag to your script if uvicorn inside supports it, or use uvicorn command directly like other services.
+
+  sandbox_env:
+    build:
+      context: .
+      dockerfile: deploy/docker/sandbox_env.Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - SANDBOX_PORT=8005
+      - HOST=0.0.0.0
+    volumes:
+      - ./deploy/serving/serve_sandbox_env.py:/app/deploy/serving/serve_sandbox_env.py # Optional: For live reloading
+    # command: uvicorn deploy.serving.serve_sandbox_env:app --host 0.0.0.0 --port 8005 --reload
+
+# To run all services: docker-compose up --build
+# To run in detached mode: docker-compose up --build -d
+# To stop services: docker-compose down 

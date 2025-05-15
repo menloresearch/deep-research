@@ -51,12 +51,18 @@ class DeepResearchAgent:
                 logger.info(
                     f"Initializing LLM client for OpenRouter. Model: {self.llm_model_name}, Base URL: {OPENROUTER_BASE_URL}"
                 )
-                self.llm_client = OpenAI(api_key=actual_openrouter_key, base_url=OPENROUTER_BASE_URL)
+                self.llm_client = OpenAI(
+                    api_key=actual_openrouter_key, base_url=OPENROUTER_BASE_URL
+                )
             elif actual_openai_key and "YOUR_KEY_HERE" not in actual_openai_key:
-                logger.info(f"Initializing LLM client for direct OpenAI. Model: {self.llm_model_name}")
+                logger.info(
+                    f"Initializing LLM client for direct OpenAI. Model: {self.llm_model_name}"
+                )
                 self.llm_client = OpenAI(api_key=actual_openai_key)
             else:
-                logger.warning("Neither OpenRouter nor OpenAI API key is valid or configured. Using MockLLMClient.")
+                logger.warning(
+                    "Neither OpenRouter nor OpenAI API key is valid or configured. Using MockLLMClient."
+                )
                 self.llm_client = MockLLMClient(model_name=self.llm_model_name)
 
         self.system_prompt = get_agent_system_prompt(list(self.tools.values()))
@@ -71,7 +77,9 @@ class DeepResearchAgent:
         if isinstance(self.llm_client, MockLLMClient):
             return self.llm_client.generate(self.conversation_history)
 
-        messages_for_llm = [{"role": "system", "content": self.system_prompt}] + self.conversation_history
+        messages_for_llm = [
+            {"role": "system", "content": self.system_prompt}
+        ] + self.conversation_history
 
         try:
             logger.debug(
@@ -120,9 +128,13 @@ class DeepResearchAgent:
                     f"LLM response did not contain a recognizable action tag. Response: {llm_response_text}"
                 )
                 if BEGIN_ANSWER in llm_response_text:
-                    final_answer_content = extract_between_tags(llm_response_text, BEGIN_ANSWER, END_ANSWER)
+                    final_answer_content = extract_between_tags(
+                        llm_response_text, BEGIN_ANSWER, END_ANSWER
+                    )
                     if final_answer_content:
-                        logger.info(f"Agent decided to Answer (implicitly parsed): {final_answer_content}")
+                        logger.info(
+                            f"Agent decided to Answer (implicitly parsed): {final_answer_content}"
+                        )
                         break
                 self._add_to_history(
                     "user",
@@ -139,25 +151,35 @@ class DeepResearchAgent:
 
             elif action_name in self.tools:
                 tool_to_use = self.tools[action_name]
-                logger.info(f"Agent wants to use Tool: '{tool_to_use.name}' with Args: '{action_args_str}'")
+                logger.info(
+                    f"Agent wants to use Tool: '{tool_to_use.name}' with Args: '{action_args_str}'"
+                )
 
                 tool_context = {
                     "conversation_history": self.conversation_history,
                     "original_user_query": self.original_user_query,
                 }
                 try:
-                    tool_output = tool_to_use.execute(action_args_str, full_context=tool_context)
+                    tool_output = tool_to_use.execute(
+                        action_args_str, full_context=tool_context
+                    )
                 except Exception as e:
-                    logger.error(f"Error executing tool {tool_to_use.name}: {e}", exc_info=True)
+                    logger.error(
+                        f"Error executing tool {tool_to_use.name}: {e}", exc_info=True
+                    )
                     tool_output = f"Error: Tool '{tool_to_use.name}' failed with message: {str(e)}"
 
-                logger.info(f"Tool Output ({tool_to_use.name}) [shortened]:\n{tool_output[:300]}...")
+                logger.info(
+                    f"Tool Output ({tool_to_use.name}) [shortened]:\n{tool_output[:300]}..."
+                )
 
                 tool_feedback_message = f"{INFORMATION_START}\nTool: {tool_to_use.name}\nArguments: {action_args_str}\nOutput:\n{tool_output}\n{INFORMATION_END}"
                 self._add_to_history("user", tool_feedback_message)
 
             else:
-                logger.warning(f"LLM tried to call unknown/unavailable tool: '{action_name}'")
+                logger.warning(
+                    f"LLM tried to call unknown/unavailable tool: '{action_name}'"
+                )
                 error_message = f"{INFORMATION_START}\nError: You tried to use a tool named '{action_name}', which is not available. Please choose from the list of available tools.\n{INFORMATION_END}"
                 self._add_to_history("user", error_message)
 
@@ -167,7 +189,9 @@ class DeepResearchAgent:
         if not final_answer_content:
             logger.warning("Agent reached max turns without a final answer.")
             last_thought = (
-                extract_between_tags(self.conversation_history[-1]["content"], BEGIN_THINK, END_THINK)
+                extract_between_tags(
+                    self.conversation_history[-1]["content"], BEGIN_THINK, END_THINK
+                )
                 if self.conversation_history
                 else None
             )
@@ -191,7 +215,9 @@ class MockLLMClient:
                 potential_query = msg["content"]
                 prefix_to_strip = "please answer the following question: "
                 if potential_query.lower().startswith(prefix_to_strip):
-                    initial_user_query_content = potential_query[len(prefix_to_strip) :].lower()
+                    initial_user_query_content = potential_query[
+                        len(prefix_to_strip) :
+                    ].lower()
                 else:
                     initial_user_query_content = potential_query.lower()
                 break
@@ -216,7 +242,11 @@ class MockLLMClient:
                 response_content = f"{BEGIN_THINK}I have processed search results for '{initial_user_query_content}'.{END_THINK}{BEGIN_ANSWER}This is a mock answer for '{initial_user_query_content}' based on search results.{END_ANSWER}"
             else:
                 # If it's an initial, unrecognized query, suggest search
-                search_term = initial_user_query_content if initial_user_query_content else "the user's request"
+                search_term = (
+                    initial_user_query_content
+                    if initial_user_query_content
+                    else "the user's request"
+                )
                 response_content = f"{BEGIN_THINK}I need to find information about {search_term}.{END_THINK}{BEGIN_SEARCH}information about {search_term}{END_SEARCH}"
 
         return response_content

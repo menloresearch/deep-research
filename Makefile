@@ -19,8 +19,8 @@ clean:
 ## Format source code with ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	ruff check --fix --exclude third_party --exclude notebooks
+	ruff format --exclude third_party --exclude notebooks
 
 
 ## Run tests
@@ -51,12 +51,47 @@ data:
 
 # Target to run the new simple retrieval server
 run-simple-retrieval-server:
-	@echo "Starting the simple retrieval server on port 8001..."
-	@echo "Access the API docs at http://localhost:8001/docs"
-	PYTHONPATH=. uvicorn src.search.retrieval_server:app --host 0.0.0.0 --port 8001
+	@echo "Starting the simple retrieval server (FlashRAG API Mock) on port 8002..."
+	@echo "Access the API docs at http://localhost:8002/docs"
+	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002
 
 # Example: run simple retrieval server with reload for development
 run-simple-retrieval-server-dev:
-	@echo "Starting the simple retrieval server with reload on port 8001..."
-	@echo "Access the API docs at http://localhost:8001/docs"
-	PYTHONPATH=. uvicorn src.search.retrieval_server:app --host 0.0.0.0 --port 8001 --reload
+	@echo "Starting the simple retrieval server (FlashRAG API Mock) with reload on port 8002..."
+	@echo "Access the API docs at http://localhost:8002/docs"
+	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002 --reload
+
+
+#################################################################################
+# DOCKER COMMANDS                                                               #
+#################################################################################
+
+## Start all services in detached mode with a build
+.PHONY: docker-up
+docker-up:
+	@echo "Starting all services with Docker Compose..."
+	docker compose up --build -d
+
+## Stop all services
+.PHONY: docker-down
+docker-down:
+	@echo "Stopping all services..."
+	docker compose down
+
+## View logs for all services
+.PHONY: docker-logs
+docker-logs:
+	@echo "Tailing logs for all services..."
+	docker compose logs -f
+
+## Rebuild all service images
+.PHONY: docker-build
+docker-build:
+	@echo "Rebuilding all service images..."
+	docker compose build
+
+## Show status of services
+.PHONY: docker-ps
+docker-ps:
+	@echo "Showing status of Docker Compose services..."
+	docker compose ps

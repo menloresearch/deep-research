@@ -24,7 +24,9 @@ class Tool(ABC):
         self.description = description  # For LLM to understand what the tool does
 
     @abstractmethod
-    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+    def execute(
+        self, args: str | dict[str, Any], full_context: Optional[dict] = None
+    ) -> str:
         """
         Executes the tool with given arguments.
         full_context can provide additional information like conversation history.
@@ -49,7 +51,9 @@ class RAGSearchTool(Tool):
             description="Searches a local knowledge base for information relevant to a query. Use this for foundational knowledge, definitions, or specific context from provided documents.",
         )
 
-    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+    def execute(
+        self, args: str | dict[str, Any], full_context: Optional[dict] = None
+    ) -> str:
         query = args if isinstance(args, str) else args.get("query", "")
         if not query:
             logger.warning("RAGSearchTool called with no query.")
@@ -77,7 +81,9 @@ class WebSearchTool(Tool):
             description="Searches the live internet using a search engine for up-to-date information, current events, or topics not covered by the local knowledge base.",
         )
 
-    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+    def execute(
+        self, args: str | dict[str, Any], full_context: Optional[dict] = None
+    ) -> str:
         query = args if isinstance(args, str) else args.get("query", "")
         if not query:
             logger.warning("WebSearchTool called with no query.")
@@ -97,19 +103,21 @@ class WebSearchTool(Tool):
             # search_api_results = await bing_web_search_async(query, BING_API_KEY, ...)
             # relevant_info = extract_relevant_info(search_api_results) # from demo
             # return format_search_results_for_llm(relevant_info) # format as list of dicts
-            return format_search_results_for_llm(  # Simulate returning formatted results
-                [
-                    {
-                        "title": f"Web Result 1 for {query}",
-                        "snippet": "This is a snippet...",
-                        "url": "http://example.com/1",
-                    },
-                    {
-                        "title": f"Web Result 2 for {query}",
-                        "snippet": "Another relevant snippet.",
-                        "url": "http://example.com/2",
-                    },
-                ]
+            return (
+                format_search_results_for_llm(  # Simulate returning formatted results
+                    [
+                        {
+                            "title": f"Web Result 1 for {query}",
+                            "snippet": "This is a snippet...",
+                            "url": "http://example.com/1",
+                        },
+                        {
+                            "title": f"Web Result 2 for {query}",
+                            "snippet": "Another relevant snippet.",
+                            "url": "http://example.com/2",
+                        },
+                    ]
+                )
             )
         except Exception as e:
             logger.error(f"WebSearchTool error for query '{query}': {e}", exc_info=True)
@@ -130,15 +138,21 @@ class ClickAndFetchTool(Tool):
             description="Fetches the content of a given web page URL and provides a summary or key information. Use this to get details from a specific web page found in search results.",
         )
 
-    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+    def execute(
+        self, args: str | dict[str, Any], full_context: Optional[dict] = None
+    ) -> str:
         url = args if isinstance(args, str) else args.get("url", "")
         if not url:
             return "Error: No URL provided to ClickAndFetchTool."
 
         original_query = (
-            full_context.get("original_user_query", "the current topic") if full_context else "the current topic"
+            full_context.get("original_user_query", "the current topic")
+            if full_context
+            else "the current topic"
         )
-        logger.info(f"ClickAndFetchTool executing for URL: '{url}' with context: '{original_query}'")
+        logger.info(
+            f"ClickAndFetchTool executing for URL: '{url}' with context: '{original_query}'"
+        )
         # Similar async challenge as WebSearchTool
         try:
             # 1. Fetch content (e.g., using aiohttp, Jina from your demo)
@@ -166,7 +180,9 @@ class WriteSectionTool(Tool):
         # This tool is more of a meta-action. The "execution" is handled by the agent
         # by re-prompting the LLM with specific instructions to generate the section.
 
-    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+    def execute(
+        self, args: str | dict[str, Any], full_context: Optional[dict] = None
+    ) -> str:
         # Args might be a string like "Section Name: Introduction\nTask: Write a brief intro about X."
         # Or a dict: {"section_name": "Introduction", "task": "Write a brief intro about X."}
         section_details = args if isinstance(args, str) else str(args)
@@ -199,7 +215,9 @@ def get_tool_instance(name: str, **kwargs) -> Optional[Tool]:
         try:
             return tool_class(**kwargs)
         except Exception as e:
-            logger.error(f"Failed to instantiate tool '{tool_name_cleaned}': {e}", exc_info=True)
+            logger.error(
+                f"Failed to instantiate tool '{tool_name_cleaned}': {e}", exc_info=True
+            )
             return None
     logger.warning(f"Tool '{tool_name_cleaned}' not found in AVAILABLE_TOOLS_CLASSES.")
     return None
@@ -221,8 +239,12 @@ def get_all_tool_instances(tool_names: Optional[list[str]] = None) -> dict[str, 
         if name_key in AVAILABLE_TOOLS_CLASSES:
             instance = get_tool_instance(name_key)  # Uses the cleaned name_key
             if instance:
-                instances[instance.name] = instance  # Use tool.name (which should match name_key)
+                instances[instance.name] = (
+                    instance  # Use tool.name (which should match name_key)
+                )
         else:
-            logger.warning(f"Requested tool '{name_key}' not found in available tool classes.")
+            logger.warning(
+                f"Requested tool '{name_key}' not found in available tool classes."
+            )
 
     return instances

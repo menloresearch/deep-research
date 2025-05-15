@@ -50,7 +50,9 @@ def parse_agent_action(response_text: str) -> Optional[Tuple[str, str]]:
 
     for action_name, (start_tag, end_tag) in action_parsers.items():
         content = extract_between_tags(response_text, start_tag, end_tag)
-        if content is not None:  # Check for not None, as empty string can be valid content
+        if (
+            content is not None
+        ):  # Check for not None, as empty string can be valid content
             return action_name, content
 
     return None  # No recognizable primary action tag found

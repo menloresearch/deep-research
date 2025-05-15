@@ -90,7 +90,11 @@ def format_search_results_for_llm(results: list[dict[str, str]] | str) -> str:
                 doc_str += f"(URL: {res_item['url']})"
             doc_str += "\n"
             # Prefer 'content' if available (e.g., from RAG or fetched page), then 'snippet'
-            page_info = res_item.get("page_info") or res_item.get("content") or res_item.get("snippet", "N/A")
+            page_info = (
+                res_item.get("page_info")
+                or res_item.get("content")
+                or res_item.get("snippet", "N/A")
+            )
             doc_str += page_info
         elif isinstance(res_item, str):  # Raw string content
             doc_str += f"\n{res_item}"
@@ -114,7 +118,12 @@ def format_search_results(results: str | list[str]) -> str:
             content = "\n".join(results)
         else:
             # If results are raw content, format them with default titles
-            content = "\n".join([f"Doc {i + 1}(Title: Document {i + 1})\n{r}" for i, r in enumerate(results)])
+            content = "\n".join(
+                [
+                    f"Doc {i + 1}(Title: Document {i + 1})\n{r}"
+                    for i, r in enumerate(results)
+                ]
+            )
     else:  # Single string
         if "Doc" in results and "Title:" in results:
             content = results

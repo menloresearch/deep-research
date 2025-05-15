@@ -32,7 +32,9 @@ def extract_unique_paragraphs(input_paths: list[str], output_csv_path: str) -> N
                         data = json.loads(line)
                         main_question_id = data.get("id")
                         if not main_question_id:
-                            print(f"Warning: Missing 'id' in line {line_num} of {file_path}")
+                            print(
+                                f"Warning: Missing 'id' in line {line_num} of {file_path}"
+                            )
                             continue
 
                         for p in data.get("paragraphs", []):
@@ -46,15 +48,21 @@ def extract_unique_paragraphs(input_paths: list[str], output_csv_path: str) -> N
                             paragraphs_data[content].add(main_question_id)
 
                     except json.JSONDecodeError:
-                        print(f"Warning: Skipping invalid JSON in line {line_num} of {file_path}")
+                        print(
+                            f"Warning: Skipping invalid JSON in line {line_num} of {file_path}"
+                        )
                     except Exception as e:
-                        print(f"Warning: Error processing line {line_num} in {file_path}: {e}")
+                        print(
+                            f"Warning: Error processing line {line_num} in {file_path}: {e}"
+                        )
         except FileNotFoundError:
             print(f"Error: Input file not found: {file_path}")
         except Exception as e:
             print(f"Error reading file {file_path}: {e}")
 
-    print(f"Found {len(paragraphs_data)} unique paragraphs (supporting and non-supporting).")
+    print(
+        f"Found {len(paragraphs_data)} unique paragraphs (supporting and non-supporting)."
+    )
 
     # Prepare data for DataFrame
     output_list = []

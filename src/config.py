@@ -45,7 +45,9 @@ def _setup_basic_logging(log_folder: Path):
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)  # Default for Ctrl+C
             return
-        logger.opt(exception=(exc_type, exc_value, exc_traceback)).critical("Unhandled critical exception:")
+        logger.opt(exception=(exc_type, exc_value, exc_traceback)).critical(
+            "Unhandled critical exception:"
+        )
 
     sys.excepthook = basic_exception_handler
     logger.info("Basic logging configured.")
@@ -92,7 +94,9 @@ END_WRITE_SECTION = "<|end_write_section|>"
 # API Keys (from .env)
 BING_API_KEY = os.getenv("BING_API_KEY")
 JINA_API_KEY = os.getenv("JINA_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Retain for other potential OpenAI direct uses or legacy
+OPENAI_API_KEY = os.getenv(
+    "OPENAI_API_KEY"
+)  # Retain for other potential OpenAI direct uses or legacy
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # For OpenRouter
 
 # OpenRouter Specific Configuration
@@ -112,7 +116,9 @@ WEB_SEARCH_RESULTS_COUNT = int(os.getenv("WEB_SEARCH_RESULTS_COUNT", 5))
 # Model Server configurations (if you still run separate model servers for retriever/generator)
 # These are simplified and assume you might still use them for inference.
 RETRIEVER_MODEL_REPO_ID = DEFAULT_EMBEDDING_MODEL
-GENERATOR_MODEL_REPO_ID = os.getenv("GENERATOR_MODEL_REPO_ID", DEFAULT_LLM_MODEL)  # Or a specific generator model
+GENERATOR_MODEL_REPO_ID = os.getenv(
+    "GENERATOR_MODEL_REPO_ID", DEFAULT_LLM_MODEL
+)  # Or a specific generator model
 
 # --- Minimal Torch import (optional, if not used directly in config) ---
 # If you don't need torch here, you can remove it.

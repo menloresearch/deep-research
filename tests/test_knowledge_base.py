@@ -22,7 +22,9 @@ def test_simple_rag_search_runs_without_error() -> None:
         # If results are returned, check their structure (if any)
         if results:
             for item in results:
-                assert isinstance(item, dict), "Each item in results should be a dictionary."
+                assert isinstance(item, dict), (
+                    "Each item in results should be a dictionary."
+                )
                 # Based on the function, expected keys might be 'id', 'text', 'metadata', 'distance'
                 # or the transformed keys like 'title', 'snippet', 'url' if post-processing happens within.
                 # Given format_search_results_for_llm is separate, simple_rag_search likely returns raw-ish results.

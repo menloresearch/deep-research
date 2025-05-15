@@ -1,5 +1,12 @@
 # tests/test_utils.py
-from src.config import BEGIN_ANSWER, BEGIN_SEARCH, BEGIN_THINK, END_ANSWER, END_SEARCH, END_THINK
+from src.config import (
+    BEGIN_ANSWER,
+    BEGIN_SEARCH,
+    BEGIN_THINK,
+    END_ANSWER,
+    END_SEARCH,
+    END_THINK,
+)
 from src.utils import (
     clean_llm_output,
     extract_between_tags,

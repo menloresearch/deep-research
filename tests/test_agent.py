@@ -23,7 +23,10 @@ ORIGINAL_OPENROUTER_API_KEY = OPENROUTER_API_KEY
 @pytest.fixture(autouse=True)
 def ensure_mock_llm_if_no_key(monkeypatch):
     """Fixture to ensure MockLLMClient is used if OPENROUTER_API_KEY is not set or is placeholder."""
-    if not ORIGINAL_OPENROUTER_API_KEY or "YOUR_KEY_HERE" in ORIGINAL_OPENROUTER_API_KEY:
+    if (
+        not ORIGINAL_OPENROUTER_API_KEY
+        or "YOUR_KEY_HERE" in ORIGINAL_OPENROUTER_API_KEY
+    ):
         monkeypatch.setattr("src.agent.OPENROUTER_API_KEY", None)
         monkeypatch.setattr("src.agent.OPENAI_API_KEY", None)
     yield
@@ -58,7 +61,12 @@ def test_deep_research_agent_run_mock_direct_answer() -> None:
 # MockLLMClient tests (directly)
 def test_mock_llm_client_generates_search_for_france() -> None:
     client = MockLLMClient(model_name=DEFAULT_LLM_MODEL)
-    messages = [{"role": "user", "content": "Please answer the following question: what is the capital of france?"}]
+    messages = [
+        {
+            "role": "user",
+            "content": "Please answer the following question: what is the capital of france?",
+        }
+    ]
     response = client.generate(messages)
     assert (
         f"{BEGIN_THINK}The user wants to know the capital of France. I should search for this.{END_THINK}{BEGIN_SEARCH}capital of France{END_SEARCH}"
@@ -69,7 +77,10 @@ def test_mock_llm_client_generates_search_for_france() -> None:
 def test_mock_llm_client_generates_answer_for_france_after_info() -> None:
     client = MockLLMClient(model_name=DEFAULT_LLM_MODEL)
     messages = [
-        {"role": "user", "content": "Please answer the following question: what is the capital of france?"},
+        {
+            "role": "user",
+            "content": "Please answer the following question: what is the capital of france?",
+        },
         {
             "role": "assistant",
             "content": f"{BEGIN_THINK}I should search.{END_THINK}{BEGIN_SEARCH}capital of France{END_SEARCH}",
@@ -81,11 +92,19 @@ def test_mock_llm_client_generates_answer_for_france_after_info() -> None:
     ]
     response = client.generate(messages)
     assert f"{BEGIN_ANSWER}The capital of France is Paris.{END_ANSWER}" in response
-    assert f"{BEGIN_THINK}I have found information about the capital of France.{END_THINK}" in response
+    assert (
+        f"{BEGIN_THINK}I have found information about the capital of France.{END_THINK}"
+        in response
+    )
 
 
 def test_mock_llm_client_generic_query_search() -> None:
     client = MockLLMClient(model_name=DEFAULT_LLM_MODEL)
-    messages = [{"role": "user", "content": "Please answer the following question: what is the capital of france?"}]
+    messages = [
+        {
+            "role": "user",
+            "content": "Please answer the following question: what is the capital of france?",
+        }
+    ]
     response = client.generate(messages)
     assert f"{BEGIN_SEARCH}capital of France{END_SEARCH}" in response

@@ -23,7 +23,9 @@ class CustomHuggingFaceEmbeddings(Embeddings):
         self.model_name = model_name
         try:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            logger.info(f"Using device: {self.device} for embeddings model {self.model_name}")
+            logger.info(
+                f"Using device: {self.device} for embeddings model {self.model_name}"
+            )
             self.model = AutoModel.from_pretrained(model_name).to(self.device)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.default_mode = default_mode  # "sentence" or "query"
@@ -43,7 +45,9 @@ class CustomHuggingFaceEmbeddings(Embeddings):
         ), f"Unsupported mode: {mode}. Only 'query' and 'sentence' are supported."
 
         # Tokenize the input texts
-        inp = self.tokenizer(texts, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        inp = self.tokenizer(
+            texts, return_tensors="pt", padding=True, truncation=True, max_length=512
+        )
         inp = {key: value.to(self.device) for key, value in inp.items()}
 
         with torch.no_grad():
@@ -70,7 +74,9 @@ class CustomHuggingFaceEmbeddings(Embeddings):
             # Return a zero vector or raise an error, depending on desired behavior
             logger.warning("Embedding empty query string.")
             # Assuming model hidden size can be accessed, otherwise define a fixed size
-            hidden_size = self.model.config.hidden_size if hasattr(self.model, "config") else 768
+            hidden_size = (
+                self.model.config.hidden_size if hasattr(self.model, "config") else 768
+            )
             return [0.0] * hidden_size
 
         vectors = self._get_embedding_vectors([text], mode="query")

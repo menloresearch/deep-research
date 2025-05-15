@@ -67,7 +67,13 @@ def test_format_search_results_for_llm_empty() -> None:
 
 
 def test_format_search_results_for_llm_single_result() -> None:
-    results = [{"title": "Llama Facts", "url": "http://example.com/llama", "snippet": "Llamas are cool."}]
+    results = [
+        {
+            "title": "Llama Facts",
+            "url": "http://example.com/llama",
+            "snippet": "Llamas are cool.",
+        }
+    ]
     formatted_string = format_search_results_for_llm(results)
     assert "Doc 1:" in formatted_string
     assert "(Title: Llama Facts)" in formatted_string
@@ -79,12 +85,26 @@ def test_format_search_results_for_llm_single_result() -> None:
 
 def test_format_search_results_for_llm_multiple_results() -> None:
     results = [
-        {"title": "Alpaca Info", "url": "http://example.com/alpaca", "snippet": "Alpacas are fluffy."},
-        {"title": "Guanaco Details", "url": "http://example.com/guanaco", "snippet": "Guanacos are wild."},
+        {
+            "title": "Alpaca Info",
+            "url": "http://example.com/alpaca",
+            "snippet": "Alpacas are fluffy.",
+        },
+        {
+            "title": "Guanaco Details",
+            "url": "http://example.com/guanaco",
+            "snippet": "Guanacos are wild.",
+        },
     ]
     formatted_string = format_search_results_for_llm(results)
-    assert "Doc 1:(Title: Alpaca Info)(URL: http://example.com/alpaca)\nAlpacas are fluffy." in formatted_string
-    assert "Doc 2:(Title: Guanaco Details)(URL: http://example.com/guanaco)\nGuanacos are wild." in formatted_string
+    assert (
+        "Doc 1:(Title: Alpaca Info)(URL: http://example.com/alpaca)\nAlpacas are fluffy."
+        in formatted_string
+    )
+    assert (
+        "Doc 2:(Title: Guanaco Details)(URL: http://example.com/guanaco)\nGuanacos are wild."
+        in formatted_string
+    )
 
 
 def test_format_search_results_for_llm_missing_keys() -> None:
