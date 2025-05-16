@@ -53,7 +53,6 @@ dependencies = [
     "gradio>=5.0.0",
     "rouge-chinese",
     "jieba",
-    "flash-attn>=2.7.4.post1",
     "tensorboard>=2.19.0",
 ]
 

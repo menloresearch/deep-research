@@ -1,16 +1,16 @@
 PROMPT_KEY=question
-TRAIN_BATCH_SIZE=6
-PPO_MINI_BATCH_SIZE=4
-LR=1e-6
+TRAIN_BATCH_SIZE=24
+PPO_MINI_BATCH_SIZE=16
+LR=1e-5
 MAX_PROMPT_LENGTH=1536
 MAX_RESPONSE_LENGTH=6656
 USE_RE_CALL=True
 PROMPT_TEMPLATE_NAME=re_call_template_sys
 # ACTOR_MODEL_PATH="Qwen/Qwen2.5-0.5B-Instruct"
-ACTOR_MODEL_PATH="Qwen/Qwen3-0.6B"
+ACTOR_MODEL_PATH="Qwen/Qwen3-30B-A3B"
 ROLLOUT_NAME=vllm_with_tool
 REWARD_MANAGER=re_call
-ROLLOUT_N=6
+ROLLOUT_N=24
 ROLLOUT_TP=1
 ROLLOUT_GPU_UTIL=0.8
 MAX_TURNS=5
@@ -19,16 +19,16 @@ SANDBOX_URL=http://sandbox_env:8005/execute
 PROJECT_NAME=deep-research
 EXPERIMENT_NAME=train-qwen3-0.6b-instruct-re-call-vllm-with-tool
 NNODES=1
-N_GPUS_PER_NODE=3
-CUDA_VISIBLE_DEVICES_LIST="1,2,3"
+N_GPUS_PER_NODE=8
+CUDA_VISIBLE_DEVICES_LIST="0,1,2,3,4,5,6,7"
 SAVE_FREQ=5
 TEST_FREQ=5
 TOTAL_EPOCHS=2
 WANDB_API_KEY="None"
 SAVE_PATH="./checkpoints/train-qwen3-0.6b-instruct-re-call-vllm-with-tool"
 # TRAIN_FILES="['/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_train.parquet', '/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_train.parquet']"
-TRAIN_FILES="['/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_test.parquet', '/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_test.parquet']"
-TEST_FILES="['/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_test.parquet', '/mnt/nas/thinhlpg/code/deep-research/data/recall_data/musi_test.parquet']"
+TRAIN_FILES="['data/recall_data/musi_test.parquet', 'data/recall_data/musi_test.parquet']"
+TEST_FILES="['data/recall_data/musi_test.parquet', 'data/recall_data/musi_test.parquet']"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -84,9 +84,11 @@ fi
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES_LIST}"
 
 SCRIPT_DIR_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-PROJECT_ROOT_DIR="${SCRIPT_DIR_PATH}/../.."
+PROJECT_ROOT_DIR="${SCRIPT_DIR_PATH}" # Adjusted for top-level script
 THIRD_PARTY_DIR="${PROJECT_ROOT_DIR}/third_party"
 export PYTHONPATH="${PROJECT_ROOT_DIR}:${THIRD_PARTY_DIR}:${PYTHONPATH}"
+
+export HYDRA_FULL_ERROR=1
 
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
@@ -137,4 +139,4 @@ python3 -m verl.trainer.main_ppo \
     trainer.default_hdfs_dir=null \
     trainer.default_local_dir=${SAVE_PATH} \
     trainer.rollout_save_path=${ROLLOUT_SAVE_PATH} \
-    hydra.run.dir=${SAVE_PATH}/outputs | tee ${SAVE_PATH}/run.log
+    hydra.run.dir=${SAVE_PATH}/outputs | tee ${SAVE_PATH}/run.log 

@@ -53,14 +53,44 @@ data:
 run-simple-retrieval-server:
 	@echo "Starting the simple retrieval server (FlashRAG API Mock) on port 8002..."
 	@echo "Access the API docs at http://localhost:8002/docs"
-	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002
+	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002 &
 
 # Example: run simple retrieval server with reload for development
 run-simple-retrieval-server-dev:
 	@echo "Starting the simple retrieval server (FlashRAG API Mock) with reload on port 8002..."
 	@echo "Access the API docs at http://localhost:8002/docs"
-	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002 --reload
+	PYTHONPATH=. uvicorn deploy.serving.serve_simple_retriever:app --host 0.0.0.0 --port 8002 --reload &
 
+# Target to run the mock retriever server
+run-mock-retriever:
+	@echo "Starting the mock retriever server on port 8003..."
+	PYTHONPATH=. uvicorn deploy.serving.serve_mock_retriever:app --host 0.0.0.0 --port 8003 &
+
+# Target to run the flashrag retriever server
+run-flashrag-retriever:
+	@echo "Starting the flashrag retriever server on port 8001..."
+	PYTHONPATH=. python deploy.serving.serve_flashrag_retriever.py --host 0.0.0.0 --port 8001 --config deploy/serving/retriever_config.yaml &
+
+# Target to run the sandbox_env server
+run-sandbox-env:
+	@echo "Starting the sandbox_env server on port 8005..."
+	PYTHONPATH=. uvicorn deploy.serving.serve_sandbox_env:app --host 0.0.0.0 --port 8005 &
+
+# Target to run all services sequentially without Docker
+# Note: This will run them one after the other in the foreground.
+# For concurrent execution, you'll need to run each in a separate terminal or background them.
+run-all-services-nodocker: run-mock-retriever run-simple-retrieval-server run-flashrag-retriever run-sandbox-env
+	@echo "Attempted to start all services in the background."
+	@echo "Use 'jobs' to see background processes and 'fg <job_id>' to bring one to foreground, or check 'ps aux | grep uvicorn' and 'ps aux | grep python'."
+
+# Target to kill all non-Docker services
+kill-all-services-nodocker:
+	@echo "Attempting to kill all non-Docker services..."
+	@pkill -f "deploy.serving.serve_mock_retriever" || echo "Mock retriever not found or already stopped."
+	@pkill -f "deploy.serving.serve_simple_retriever" || echo "Simple retriever not found or already stopped."
+	@pkill -f "deploy.serving.serve_flashrag_retriever.py" || echo "FlashRAG retriever not found or already stopped."
+	@pkill -f "deploy.serving.serve_sandbox_env" || echo "Sandbox env not found or already stopped."
+	@echo "Kill commands executed. Verify with 'ps aux' or by trying to access the ports."
 
 #################################################################################
 # DOCKER COMMANDS                                                               #

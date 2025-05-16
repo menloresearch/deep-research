@@ -2,8 +2,8 @@
 .vscode/
 data/
 logs/
-models/
 docs_for_ai/
+checkpoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
