@@ -49,6 +49,13 @@ data:
 	@echo "Processed Musique DEV JSONL ready in ./data/processed/questions_dev.jsonl"
 	@echo "All Musique data preparation steps completed."
 
+## Download ReCall dataset
+.PHONY: data-recall
+data-recall:
+	@echo "Downloading ReCall dataset..."
+	$(PYTHON_INTERPRETER) scripts/download/download_recall_data.py
+	@echo "ReCall dataset ready in ./data/ReCall-data/"
+
 # Target to run the new simple retrieval server
 run-simple-retrieval-server:
 	@echo "Starting the simple retrieval server (FlashRAG API Mock) on port 8002..."
