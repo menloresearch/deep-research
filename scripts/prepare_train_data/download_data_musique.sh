@@ -6,7 +6,6 @@ set -x
 
 # If gdown doesn't work, you can download files from mentioned URLs manually
 # and put them at appropriate locations.
-pip install gdown
 
 ZIP_NAME="musique_v1.0.zip"
 

@@ -4,6 +4,9 @@ data/
 logs/
 docs_for_ai/
 checkpoints/
+tensorboard_log/
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -54,6 +54,7 @@ dependencies = [
     "rouge-chinese",
     "jieba",
     "tensorboard>=2.19.0",
+    "gdown>=5.2.0",
 ]
 
 [tool.ruff]
