@@ -1,32 +1,33 @@
+# For training on a single node with 8 GPUs (>= 80GB of VRAM each)
 PROMPT_KEY=question
-TRAIN_BATCH_SIZE=1
-PPO_MINI_BATCH_SIZE=1
+TRAIN_BATCH_SIZE=64
+PPO_MINI_BATCH_SIZE=64
 LR=1e-5
 MAX_PROMPT_LENGTH=1536
 MAX_RESPONSE_LENGTH=6656
 USE_RE_CALL=True
 PROMPT_TEMPLATE_NAME=re_call_template_sys
-ACTOR_MODEL_PATH="Qwen/Qwen3-8B"
-ROLLOUT_NAME=vllm_with_tool
+ACTOR_MODEL_PATH="Qwen/Qwen3-14B"
+ROLLOUT_NAME=deep-research-qwen3-14b-250521
 REWARD_MANAGER=re_call
-ROLLOUT_N=8
+ROLLOUT_N=5
 ROLLOUT_TP=8
 ROLLOUT_GPU_UTIL=0.9
-MAX_TURNS=5
-SEARCH_URL=http://mock_retriever:8003/search
+MAX_TURNS=32
+SEARCH_URL=http://simple_retriever:8002/search
 SANDBOX_URL=http://sandbox_env:8005/execute
 PROJECT_NAME=deep-research
-EXPERIMENT_NAME=train-qwen3-0.6b-instruct-re-call-vllm-with-tool
+EXPERIMENT_NAME=train-qwen3-14b-deep-research-250521
 NNODES=1
-N_GPUS_PER_NODE=1
+N_GPUS_PER_NODE=8
 CUDA_VISIBLE_DEVICES_LIST="0,1,2,3,4,5,6,7"
 SAVE_FREQ=5
 TEST_FREQ=5
 TOTAL_EPOCHS=2
 WANDB_API_KEY="None"
-SAVE_PATH="./checkpoints/train-qwen3-0.6b-instruct-re-call-vllm-with-tool"
-TRAIN_FILES="['data/ReCall-data/syntool_re_call/test.parquet', 'data/ReCall-data/syntool_re_call/test.parquet']"
-TEST_FILES="['data/ReCall-data/syntool_re_call/test.parquet', 'data/ReCall-data/syntool_re_call/test.parquet']"
+SAVE_PATH="./checkpoints/train-qwen3-14b-deep-research-250521"
+TRAIN_FILES="['data/processed/train.parquet', 'data/ReCall-data/syntool_re_call_sampled/train.parquet']"
+TEST_FILES="['data/processed/test.parquet', 'data/ReCall-data/syntool_re_call_sampled/test.parquet']"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

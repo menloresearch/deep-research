@@ -158,10 +158,13 @@ run-all-services-nodocker: serve-all
 .PHONY: stop-all
 stop-all:
 	@echo "Stopping all services..."
-	@pkill -f "deploy.serving.serve_mock_retriever" || echo "Mock retriever stopped."
-	@pkill -f "deploy.serving.serve_simple_retriever" || echo "Simple retriever stopped."
-	@pkill -f "deploy.serving.serve_flashrag_retriever.py" || echo "FlashRAG retriever stopped."
-	@pkill -f "deploy.serving.serve_sandbox_env" || echo "Sandbox env stopped."
+	@-pkill -f "uvicorn deploy.serving.serve_mock_retriever" || echo "No mock retriever running."
+	@-pkill -f "uvicorn deploy.serving.serve_simple_retriever" || echo "No simple retriever running."
+	@-pkill -f "python deploy.serving.serve_flashrag_retriever.py" || echo "No FlashRAG retriever running."
+	@-pkill -f "uvicorn deploy.serving.serve_sandbox_env" || echo "No sandbox env running."
+	@-pkill -9 -f "deploy/serving/serve" || echo "No other processes found."
+	@-lsof -ti:8001,8002,8003,8005 | xargs kill -9 2>/dev/null || echo "No processes on ports 8001-8005."
+	@echo "All services should be stopped now."
 
 ## Stop all services (alias to stop-all)
 .PHONY: kill-all-services-nodocker

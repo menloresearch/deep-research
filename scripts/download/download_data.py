@@ -13,9 +13,7 @@ DATA_REPO_ID = "janhq/demo-deep-research-data"
 
 def download_model(output_dir: str = "data", token: str | None = None) -> None:
     """Download model from HuggingFace."""
-    _download_from_hf(
-        MODEL_REPO_ID, output_dir, "model", token, include_model_dirs=True
-    )
+    _download_from_hf(MODEL_REPO_ID, output_dir, "model", token, include_model_dirs=True)
 
 
 def download_data(output_dir: str = "data", token: str | None = None) -> None:
@@ -65,9 +63,7 @@ def _download_from_hf(
     else:
         # Download entire repo
         print(f"Downloading repository {repo_id}...")
-        snapshot_download(
-            repo_id=repo_id, repo_type=repo_type, token=token, local_dir=output_dir
-        )
+        snapshot_download(repo_id=repo_id, repo_type=repo_type, token=token, local_dir=output_dir)
         print(f"Repository downloaded to {output_dir}")
 
         # Download model-specific directories if requested
@@ -98,13 +94,9 @@ if __name__ == "__main__":
         default="data",
         help="Type of data to download (model or data)",
     )
-    parser.add_argument(
-        "--output-dir", default="data", help="Output directory for downloaded data"
-    )
+    parser.add_argument("--output-dir", default="data", help="Output directory for downloaded data")
     parser.add_argument("--token", help="HuggingFace token")
-    parser.add_argument(
-        "--single-file", help="Download single file instead of entire repo"
-    )
+    parser.add_argument("--single-file", help="Download single file instead of entire repo")
 
     args = parser.parse_args()
 

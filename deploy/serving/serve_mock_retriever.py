@@ -40,9 +40,7 @@ RAG_SEARCH_RESULTS_COUNT: int = 3
 def _initial_mock_load_vectorstore() -> None:
     global _vectorstore
     # logger.info("Mock load_vectorstore called. Setting mock vectorstore.") # Removed log
-    print(
-        "Mock load_vectorstore called. Setting mock vectorstore."
-    )  # Replaced with print
+    print("Mock load_vectorstore called. Setting mock vectorstore.")  # Replaced with print
     _vectorstore = "MockVectorStoreInstanceLoaded"
 
 
@@ -50,9 +48,7 @@ def _initial_mock_simple_rag_search(query: str, k: int) -> list[dict]:
     # logger.info(f"Mock simple_rag_search called with query: '{query}', k: {k}") # Removed log
     if _vectorstore is None:
         # logger.error("Mock search called but mock vectorstore is not loaded.") # Removed log
-        print(
-            "ERROR: Mock search called but mock vectorstore is not loaded."
-        )  # Replaced with print
+        print("ERROR: Mock search called but mock vectorstore is not loaded.")  # Replaced with print
         return []
     results = []
     for i in range(min(k, 5)):  # Return at most 5 mock results, or k if less
@@ -91,12 +87,8 @@ try:
     print("Successfully imported real components.")  # Replaced with print
 
 except ImportError:
-    print(
-        "Warning: Running with standalone script. Relative imports failed. Using mock components."
-    )
-    print(
-        "Ensure PYTHONPATH is set correctly (e.g., to project root) if expecting real components."
-    )
+    print("Warning: Running with standalone script. Relative imports failed. Using mock components.")
+    print("Ensure PYTHONPATH is set correctly (e.g., to project root) if expecting real components.")
     # Fallbacks are already set.
 
 # Configuration for the server
@@ -199,21 +191,15 @@ async def search_endpoint(
         f"MOCK Processing search: '{request.query}', top_n={request.top_n}, return_score={request.return_score}"
     )  # Replaced with print
     try:
-        raw_search_results = _perform_internal_search(
-            query_text=request.query, top_n_results=request.top_n
-        )
+        raw_search_results = _perform_internal_search(query_text=request.query, top_n_results=request.top_n)
         return _format_results_for_api(
             search_results_list=raw_search_results,
             return_score_flag=request.return_score,
         )
     except Exception as e:
         # logger.error(f"Error during MOCK search for query '{request.query}': {e}", exc_info=True) # Removed log
-        print(
-            f"Error during MOCK search for query '{request.query}': {e}"
-        )  # Replaced with print
-        raise HTTPException(
-            status_code=500, detail="An error occurred during the mock search."
-        )
+        print(f"Error during MOCK search for query '{request.query}': {e}")  # Replaced with print
+        raise HTTPException(status_code=500, detail="An error occurred during the mock search.")
 
 
 @app.post("/batch_search")
@@ -225,9 +211,7 @@ async def batch_search_endpoint(
         raise HTTPException(status_code=503, detail="Mock Vectorstore not available.")
     if not request.query:
         # logger.warning("Batch search request with empty query list.") # Removed log
-        raise HTTPException(
-            status_code=400, detail="Query list cannot be empty for batch search."
-        )
+        raise HTTPException(status_code=400, detail="Query list cannot be empty for batch search.")
 
     # logger.info(f"MOCK Processing batch search for {len(request.query)} queries, top_n={request.top_n}, return_score={request.return_score}") # Removed log
     print(
@@ -259,10 +243,7 @@ async def batch_search_endpoint(
 
                 if request.return_score:
                     # Ensure correct unpacking and type handling
-                    if (
-                        isinstance(formatted_output, tuple)
-                        and len(formatted_output) == 2
-                    ):
+                    if isinstance(formatted_output, tuple) and len(formatted_output) == 2:
                         current_query_docs, current_query_scores = formatted_output
                     else:
                         # logger.error("Type mismatch in batch search formatting with scores. Expected tuple.") # Removed log
@@ -292,9 +273,7 @@ async def batch_search_endpoint(
     except Exception as e:
         # logger.error(f"Error during MOCK batch search: {e}", exc_info=True) # Removed log
         print(f"Error during MOCK batch search: {e}")  # Replaced with print
-        raise HTTPException(
-            status_code=500, detail="An error occurred during the mock batch search."
-        )
+        raise HTTPException(status_code=500, detail="An error occurred during the mock batch search.")
 
 
 # --- CLI Handling (Simplified for server only) ---
@@ -312,32 +291,22 @@ if __name__ == "__main__":
         default=1,
         help="Number of retrievers (ignored, always 1).",
     )
-    parser.add_argument(
-        "--host", type=str, default=HOST, help=f"Host (default: {HOST})"
-    )
-    parser.add_argument(
-        "--port", type=int, default=PORT, help=f"Port (default: {PORT})"
-    )
+    parser.add_argument("--host", type=str, default=HOST, help=f"Host (default: {HOST})")
+    parser.add_argument("--port", type=int, default=PORT, help=f"Port (default: {PORT})")
     args = parser.parse_args()
 
     # logger.info(f"Starting MOCK retrieval server on http://{args.host}:{args.port}") # Removed log
-    print(
-        f"Starting MOCK retrieval server on http://{args.host}:{args.port}"
-    )  # Replaced with print
+    print(f"Starting MOCK retrieval server on http://{args.host}:{args.port}")  # Replaced with print
     if args.config:
         # logger.info(f"Note: --config argument ('{args.config}') is ignored by this mock server.") # Removed log
-        print(
-            f"Note: --config argument ('{args.config}') is ignored by this mock server."
-        )  # Replaced with print
+        print(f"Note: --config argument ('{args.config}') is ignored by this mock server.")  # Replaced with print
     try:
         import uvicorn
 
         uvicorn.run(app, host=args.host, port=args.port)
     except ImportError:
         # logger.error("Uvicorn is not installed. Please run: pip install uvicorn[standard]") # Removed log
-        print(
-            "ERROR: Uvicorn is not installed. Please run: uv install uvicorn[standard]"
-        )  # Replaced and suggest uv
+        print("ERROR: Uvicorn is not installed. Please run: uv install uvicorn[standard]")  # Replaced and suggest uv
     except Exception as e:
         # logger.error(f"Failed to start uvicorn server: {e}", exc_info=True) # Removed log
         print(f"ERROR: Failed to start uvicorn server: {e}")  # Replaced with print
