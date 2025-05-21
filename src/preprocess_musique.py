@@ -152,7 +152,6 @@ def transform_musique_data(input_path: str, sample_config: dict, hf_repo_id: str
         # Push to Hub
         dataset.push_to_hub(
             hf_repo_id, 
-            split="train",
             private=False,  # Set to True if you want a private dataset
             commit_message="Upload processed Musique dataset"
         )
@@ -169,7 +168,7 @@ if __name__ == "__main__":
     
     # Define detailed sampling configuration
     SAMPLING_CONFIG = {
-        "2hop": 7000,
+        "2hop": 4000,
         "3hop1": 1500,
         "3hop2": 1500,
         "4hop1": 1000,
