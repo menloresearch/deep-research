@@ -121,17 +121,17 @@ def transform_musique_data(input_path: str, sample_config: dict, hf_repo_id: str
                 ]
 
                 main_answer = data.get("answer", "")
-                aliases = data.get("answer_aliases", [])
+                # aliases = data.get("answer_aliases", [])
 
-                all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
-                valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
-                unique_valid_answers = list(set(valid_answers))
+                # all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
+                # valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
+                # unique_valid_answers = list(set(valid_answers))
 
-                combined_answer_str = " OR ".join(unique_valid_answers)
+                # combined_answer_str = " OR ".join(unique_valid_answers)
 
                 processed_data["id"].append(data.get("id"))
                 processed_data["question"].append(data.get("question"))
-                processed_data["answer"].append(combined_answer_str)
+                processed_data["answer"].append(main_answer)
                 processed_data["supporting_paragraphs"].append(supporting_paragraphs)
                 
                 count += 1
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         "4hop1": 1000,
         "4hop2": 1000,
         "4hop3": 1000,
-    }  # Total = 10000
+    }  # Total = 1000
     
     # Hugging Face repo ID - CHANGE THIS to your username/repo-name
     HF_REPO_ID = "jan-hq/Musique-subset"

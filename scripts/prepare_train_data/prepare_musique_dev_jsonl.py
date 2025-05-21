@@ -1,28 +1,27 @@
-"""Prepares a deterministic sampled dev set (questions_dev.jsonl) from raw Musique dev data."""
+"""Prepares a deterministic sampled dev set from raw Musique dev data and pushes it to Hugging Face Hub."""
 
 import json
-
-# import re # No longer needed after removing get_sort_key
 from collections import defaultdict
 from pathlib import Path
+from datasets import Dataset
+from huggingface_hub import login
 
-
-def transform_musique_dev_data(input_path: str, output_path: str, sample_config: dict) -> None:
-    """Transforms Musique dev data with deterministic stratified sampling using uniform selection from sorted lists.
+def transform_musique_dev_data(input_path: str, sample_config: dict, hf_repo_id: str, token: str = None) -> None:
+    """Transforms Musique dev data with deterministic stratified sampling and pushes to Hugging Face Hub.
 
     Reads dev data, categorizes by hop type (2, 3, 4), sorts categories by ID,
     selects N samples uniformly spaced from each sorted category based on sample_config,
-    combines samples (which are inherently ordered by hop-type from config processing order,
-    and then by ID from per-category sort), combines answers/aliases, extracts supporting paras,
-    and writes the transformed data to output_path.
+    combines samples, extracts supporting paras, and pushes the dataset to Hugging Face Hub.
 
     Args:
         input_path: Path to the input JSONL file (e.g., data/raw/musique_ans_v1.0_dev.jsonl).
-        output_path: Path to the output JSONL file (e.g., data/processed/questions_dev.jsonl).
         sample_config: Dictionary specifying samples per hop type (e.g., {"2hop": 20, "3hop": 15, "4hop": 15}).
+        hf_repo_id: The repository ID on Hugging Face Hub (e.g., "username/dataset-name").
+        token: Your Hugging Face API token for authentication.
     """
-    output_dir = Path(output_path).parent
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # Login to Hugging Face if token is provided
+    if token:
+        login(token=token)
 
     print(f"Reading all data from {input_path} for dev sampling...")
     all_data = []
@@ -101,57 +100,63 @@ def transform_musique_dev_data(input_path: str, output_path: str, sample_config:
         final_sample_list.extend(selected_samples_for_hop)
 
     print(f"Selected {len(final_sample_list)} dev samples in total.")
-
-    # The final_sample_list is already sorted by hop type (2hop, 3hop, 4hop)
-    # and then by ID within each hop type, due to the order of processing sample_config
-    # and sorting within each hop category before appending.
-    # Thus, an explicit final sort is not needed if sample_config is ordered.
     print("Final dev sample list constructed in order (hop type, then ID).")
 
-    # Process and write the selected samples
-    print(f"Processing and writing {len(final_sample_list)} selected dev samples to {output_path}...")
-    count = 0
-    try:
-        with open(output_path, "w", encoding="utf-8") as outfile:
-            for data in final_sample_list:
-                try:
-                    supporting_paragraphs = [
-                        p["paragraph_text"] for p in data.get("paragraphs", []) if p.get("is_supporting", False)
-                    ]
-                    main_answer = data.get("answer", "")
-                    aliases = data.get("answer_aliases", [])
-                    all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
-                    valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
-                    unique_valid_answers = list(set(valid_answers))  # Keep unique, don't sort alphabetically
-                    combined_answer_str = " OR ".join(unique_valid_answers)
+    # Process the selected samples
+    print(f"Processing {len(final_sample_list)} selected dev samples...")
+    processed_data = {"id": [], "question": [], "answer": [], "supporting_paragraphs": []}
+    
+    for data in final_sample_list:
+        try:
+            supporting_paragraphs = [
+                p["paragraph_text"] for p in data.get("paragraphs", []) if p.get("is_supporting", False)
+            ]
+            main_answer = data.get("answer", "")
+            # aliases = data.get("answer_aliases", [])
+            # all_answers = [main_answer] + (aliases if isinstance(aliases, list) else [])
+            # valid_answers = [str(ans).strip() for ans in all_answers if ans and str(ans).strip()]
+            # unique_valid_answers = list(set(valid_answers))  # Keep unique, don't sort alphabetically
+            # combined_answer_str = " OR ".join(unique_valid_answers)
+            
+            # Add data to processed dataset
+            processed_data["id"].append(data.get("id"))
+            processed_data["question"].append(data.get("question"))
+            processed_data["answer"].append(main_answer)
+            processed_data["supporting_paragraphs"].append(supporting_paragraphs)
+            
+        except KeyError as e:
+            print(f"Skipping sample due to missing key {e}: {data.get('id')}")
+    
+    print(f"Successfully processed {len(processed_data['id'])} dev samples.")
 
-                    output_data = {
-                        "id": data.get("id"),
-                        "question": data.get("question"),
-                        "answer": combined_answer_str,
-                        "supporting_paragraphs": supporting_paragraphs,
-                    }
-                    outfile.write(json.dumps(output_data) + "\n")
-                    count += 1
-                except KeyError as e:
-                    print(f"Skipping sample due to missing key {e}: {data.get('id')}")
-        print(f"Successfully processed and wrote {count} dev samples.")
+    print(f"Creating Dataset object and pushing to Hugging Face Hub at {hf_repo_id}...")
+    try:
+        # Create a Dataset object
+        dataset = Dataset.from_dict(processed_data)
+        
+        # Push to Hub
+        dataset.push_to_hub(
+            hf_repo_id, 
+            split="test",
+            private=False,  # Set to True if you want a private dataset
+            commit_message="Upload processed Musique dataset"
+        )
+        
+        print(f"Successfully uploaded dataset to {hf_repo_id}")
     except Exception as e:
-        print(f"An unexpected error occurred during writing: {e}")
+        print(f"Error uploading to Hugging Face Hub: {e}")
+        return
 
 
 if __name__ == "__main__":
-    # Define file paths relative to the project root
-    # Ensure this script is run from the project root or adjust paths accordingly
     RAW_DIR = Path("data/raw")
-    PROCESSED_DIR = Path("data/processed")
 
     # Define sampling configuration for the dev set
-    DEV_SAMPLING_CONFIG = {"2hop": 20, "3hop": 15, "4hop": 15}  # Total = 50
+    DEV_SAMPLING_CONFIG = {"2hop": 40, "3hop": 30, "4hop": 30}  # Total = 100
 
     INPUT_FILE = RAW_DIR / "musique_ans_v1.0_dev.jsonl"
-    OUTPUT_FILE = PROCESSED_DIR / "questions_dev.jsonl"
+    HF_REPO_ID = "jan-hq/Musique-subset"
 
-    transform_musique_dev_data(str(INPUT_FILE), str(OUTPUT_FILE), DEV_SAMPLING_CONFIG)
+    transform_musique_dev_data(str(INPUT_FILE), DEV_SAMPLING_CONFIG, HF_REPO_ID)
 
     print("\nMusique DEV JSONL transformation and deterministic sampling complete.")
