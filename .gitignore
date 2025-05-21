@@ -5,7 +5,7 @@ logs/
 docs_for_ai/
 checkpoints/
 tensorboard_log/
-
+wandb/
 
 
 # Byte-compiled / optimized / DLL files
