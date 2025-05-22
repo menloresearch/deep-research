@@ -1,203 +1,91 @@
-# Deep Research
+# Deep Research Model Deployment
 
 ## Prerequisites
 
-- Python >=3.11
-- `uv` (Python package installer)
+- Python 3.11+
+- uv (universal package manager)
+- tmux
 
-## Setup
+## Running the Project
 
-1. **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/menloresearch/deep-research.git
-    cd deep-research
-    ```
-
-2. **Create a virtual environment and install dependencies using uv:**
-
-    ```bash
-    uv venv
-    source .venv/bin/activate
-    uv pip install -e .
-    ```
-
-- Install flash-attn
-
-    ```bash
-    uv pip install flash-attn --no-build-isolation
-    ```
-
-3. **Activate the virtual environment:**
-
-    ```bash
-    source .venv/bin/activate
-    ```
-
-## Running Services with Makefile
-
-- Open new terminal or tmux session
-- Run `make run-all-services-nodocker` to start all services
-- Run `make kill-all-services-nodocker` to stop all services
-
-## Run Training
+### 1. Start VLLM Model Server (MUST BE FIRST)
 
 ```bash
-bash train.sh
+# Start VLLM model server tmux session
+tmux new-session -t dr-vllm
+uv venv .venv_vllm
+source .venv_vllm/bin/activate
+uv pip install -r requirements_vllm.txt
+./serve_deepresearch_model.sh
 ```
 
-## Project Resources
-
-| Resource | URL |
-|----------|-----|
-| Data Repository | [janhq/demo-deep-research-data](https://huggingface.co/datasets/janhq/demo-deep-research-data) |
-| Model Repository | [janhq/demo-deep-research-model](https://huggingface.co/janhq/demo-deep-research-model) |
-| Wandb | [menlo-research/deep-research](https://wandb.ai/menlo-research/deep-research) |
-
-## Data Management
-
-### Download Data from HuggingFace
-
-To download data from HuggingFace, use the following command:
+### 2. Run Gradio Demo (In Another Terminal)
 
 ```bash
-make download-data
+# Start Gradio demo tmux session
+tmux new-session -t dr-eval
+uv venv .venv_eval
+source .venv_eval/bin/activate
+uv pip install -r requirements_eval.txt
+
+uv pip uninstall pdfminer
+uv pip uninstall pdfminer-six
+uv pip install pdfminer-six
+
+python 01_qwen_eval_gradio_parallel_vllm_local.py
 ```
 
-This will download the dataset from `janhq/demo-deep-research-data`.
+## Notes
 
-To download the model:
+- Start the VLLM model server FIRST before running the Gradio demo
+- Run each tmux session in a separate terminal
+- The model server and Gradio demo run in separate tmux sessions
+- Make sure all dependencies are correctly installed before running scripts
+
+## Unzipping Results
+
+To unzip results, you can use the following command format. Replace the example filename and target directory with your actual file and desired directory.
 
 ```bash
-make download-model
+mkdir -p target_directory_name
+unzip path/to/your_zip_file.zip -d target_directory_name
 ```
 
-This will download the model from `janhq/demo-deep-research-model` (including wandb and tensorboard_logs if available).
-
-### Prepare All Datasets (One time run)
-
-To download and prepare all datasets (Musique and ReCall), run:
+For example:
 
 ```bash
-make data
+mkdir -p qwen3_14b_openrouter
+unzip output/results_simpleqa_432_qwen3_14b_openrouter_250522.zip -d qwen3_14b_openrouter
 ```
 
-This will:
+## Grading Answers (`03_grade_answers.py`)
 
-1. Download the Musique dataset
-2. Process and prepare the Musique dataset
-3. Convert Musique data to ReCall format
-4. Download the ReCall syntool dataset
-5. Create sampled subsets (1000 train and 50 test examples) of syntool_re_call data
+This script automates the grading of model-generated answers against gold standard answers provided in a CSV file.
 
-### Prepare Specific Datasets
+### Logic
 
-For more granular control, you can use these commands:
+1. **Input**: Reads a CSV file (e.g., `output/combined_simpleqa_output_432.csv`) containing questions, gold answers, and predicted answers.
+2. **Environment Variable**: Requires the `OPENROUTER_API_KEY` environment variable to be set for accessing the grading LLM.
+3. **Answer Cleaning**: Preprocesses the predicted answers by removing common prefixes like "**Final answer:**".
+4. **LLM-based Grading**: For each row:
+    - Constructs a prompt using a predefined template (`GRADER_TEMPLATE`). This template includes the question, gold target, and the cleaned predicted answer. It also provides examples of "CORRECT", "INCORRECT", and "NOT_ATTEMPTED" grades.
+    - Sends the prompt to an LLM (e.g., `openai/gpt-4o` via OpenRouter API).
+    - The LLM is expected to return a single letter: "A" (CORRECT), "B" (INCORRECT), or "C" (NOT_ATTEMPTED).
+5. **Error Handling**:
+    - If the `OPENROUTER_API_KEY` is not set, it defaults to a random grade.
+    - If the LLM returns an empty or unexpected response, or if there's an API error, it defaults to "C" (NOT_ATTEMPTED) or marks the row as an "ERROR".
+    - If essential information (question or gold answer) is missing in a row, or if the predicted answer is empty, it's graded as "C" (NOT_ATTEMPTED).
+6. **Parallel Processing**: Uses `concurrent.futures.ProcessPoolExecutor` to process multiple rows in parallel, speeding up the grading process.
+7. **Output**:
+    - Appends two new columns to each row: `grade_letter` (A, B, or C) and `grade_description` (CORRECT, INCORRECT, or NOT_ATTEMPTED).
+    - Prints the graded results to the console.
+    - Saves the graded results to a new CSV file (e.g., `output/graded_combined_simpleqa_output_432.csv`).
 
-```bash
-# Download and prepare only Musique data
-make prepare-data
+### Configuration
 
-# Download and sample only ReCall syntool data
-make download-recall-syntool
-```
-
-### Upload Data to HuggingFace
-
-To upload data to HuggingFace, use the following command:
-
-```bash
-make upload-data
-```
-
-This will upload the `data` directory to `janhq/demo-deep-research-data`.
-
-To upload a model:
-
-```bash
-make upload-model
-```
-
-This will upload the `data` directory and model-specific directories (wandb, tensorboard_logs) to `janhq/demo-deep-research-model`.
-
-To upload model checkpoints:
-
-```bash
-make upload-checkpoint
-```
-
-This will upload the `checkpoints` directory to `janhq/demo-deep-research-model`.
-
-To download model checkpoints:
-
-```bash
-make download-checkpoint
-```
-
-This will download checkpoint files from `janhq/demo-deep-research-model` to the `checkpoints` directory.
-
-Both upload commands require setting the HuggingFace token:
-
-```bash
-export HF_TOKEN="your-token"
-```
-
-## Running Services with Docker Compose (Deprecated)
-
-The project uses Docker Compose to manage and run its services, including the retrieval server and any other backend components (e.g., sandbox environment).
-
-To start all services defined in the `docker-compose.yml` file (implicitly used by the `Makefile` targets), use:
-
-```bash
-make docker-up
-```
-
-## Project Structure
-
-```
-📦 .
-├── 📂 assets                    # Project assets (e.g. images, logos)
-├── 📂 data                      # Data files
-├── 📂 deploy                    # Deployment scripts and configurations
-│   ├── 📂 docker                # Dockerfiles
-│   ├── 📂 serving               # Serving scripts
-│   └── 📜 requirements.txt      # Deployment specific requirements
-├── 📂 docs                      # Project documentation
-│   └── 📜 git-workflow.md       # Guide for Git collaboration
-├── 📂 notebooks                 # Jupyter notebooks for experimentation
-├── 📂 scripts                   # Utility scripts (excluding serving)
-├── 📂 src                       # Source code
-│   ├── __init__.py
-│   ├── agent.py
-│   ├── config.py
-│   ├── embeddings.py
-│   ├── knowledge_base.py
-│   ├── prompts.py
-│   ├── rewards.py
-│   ├── search_module.py
-│   ├── tools.py
-│   └── utils.py
-├── 📂 tests                     # Test suites
-├── 📂 third_party               # Third-party libraries or code
-├── 📜 .gitignore                # Files and directories to be ignored by Git
-├── 📜 .python-version           # Specifies Python version for pyenv
-├── 📜 Makefile                  # Makefile for common development tasks
-├── 📜 README.md                 # This file
-├── 📜 pyproject.toml            # Project metadata and dependencies
-├── 📜 train.sh                  # Main training script 
-└── 📜 uv.lock                   # Lock file for uv package manager
-```
-
-## Development
-
-- Follow the Git workflow outlined in [docs/git-workflow.md](docs/git-workflow.md).
-- Use the `Makefile` for common tasks. For example:
-    - To prepare data: `make data`
-    - To run tests: `make test`
-    - To lint your code: `make lint`
+- The input folder, input filename, and output filename are configurable within the `main()` function of the script.
+- The LLM model used for grading and the number of parallel workers can also be modified in the script.
 
 ## Acknowledgements
 
-This project is under active development. During this phase, we may reference or adapt code from various excellent open-source repositories. We are committed to giving proper credit and will consolidate all attributions as the project matures.
-
-We would like to acknowledge the [ReCall project](https://github.com/Agent-RL/ReCall) and its authors, as their work in learning to reason with tool calls for LLMs via reinforcement learning has been an inspiration and a valuable resource.
+We would like to thank the authors of the open deep research code for the awesome work! <https://huggingface.co/spaces/m-ric/open_Deep-Research>.

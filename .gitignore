@@ -1,12 +1,11 @@
-# Local development files
-.vscode/
+file_uploads/
+.gradio/
+output/
 data/
-logs/
-docs_for_ai/
-checkpoints/
-tensorboard_log/
-wandb/
-
+batch_outputs/
+downloads_folder/
+.venv*
+cookies.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -182,3 +181,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Cursor
+#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
+#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  refer to https://docs.cursor.com/context/ignore-files
+.cursorignore
+.cursorindexingignore
