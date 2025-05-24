@@ -7,10 +7,9 @@ import threading
 from typing import Any, Callable, Dict, List, Optional
 
 import gradio as gr
-import torch
 from dotenv import load_dotenv
 from huggingface_hub import login
-from smolagents import CodeAgent, GoogleSearchTool, HfApiModel, LiteLLMModel, Tool
+from smolagents import CodeAgent, GoogleSearchTool, HfApiModel, LiteLLMModel, Tool, OpenAIServerModel
 from smolagents.agent_types import (
     AgentAudio,
     AgentImage,
@@ -18,8 +17,6 @@ from smolagents.agent_types import (
     handle_agent_output_types,
 )
 from smolagents.gradio_ui import stream_to_gradio
-from transformers.models.auto.modeling_auto import AutoModelForCausalLM
-from transformers.models.auto.tokenization_auto import AutoTokenizer
 
 from scripts.text_inspector_tool import TextInspectorTool
 from scripts.text_web_browser import (
@@ -32,100 +29,6 @@ from scripts.text_web_browser import (
     VisitTool,
 )
 from scripts.visual_qa import visualizer
-
-
-# Create a wrapper for our local model that mimics the expected interface
-class LocalQwenModelWrapper:
-    def __init__(
-        self,
-        model_id: Optional[str] = "jan-hq/Qwen3-14B-v0.1-deepresearch-100-step",
-        custom_role_conversions: Optional[Dict[str, str]] = None,
-    ):
-        self.model_id = model_id
-        self.custom_role_conversions = custom_role_conversions or {}
-        self._load_model()
-
-    def _load_model(self):
-        print(f"Loading local model {self.model_id}...")
-
-        # Use simple auto device mapping - let transformers handle it
-        model_kwargs = {"torch_dtype": torch.bfloat16, "device_map": "auto"}
-
-        print("Loading tokenizer...")
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-
-        print("Loading model...")
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_id, **model_kwargs)
-        print("Model loaded successfully")
-
-    def __call__(self, messages: List[Dict[str, str]], **kwargs) -> dict:
-        """Call method that processes chat messages and returns a response"""
-        try:
-            # Convert all message roles according to custom_role_conversions if needed
-            processed_messages = []
-            for message in messages:
-                role = message.get("role", "user")
-                if role in self.custom_role_conversions:
-                    role = self.custom_role_conversions[role]
-                content = message.get("content", "")
-                processed_messages.append({"role": role, "content": content})
-
-            # Format messages into a prompt
-            prompt = self._format_messages_as_prompt(processed_messages)
-
-            # Get model parameters from kwargs or use defaults
-            max_new_tokens = kwargs.get("max_tokens", 512)
-            temperature = kwargs.get("temperature", 0.7)
-
-            print(f"Generating with max_new_tokens={max_new_tokens}, temperature={temperature}")
-
-            # Generate the response - use the simple approach
-            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    temperature=temperature,
-                    do_sample=True,
-                )
-
-            # Decode and format the response
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-            # Extract only the model's response (removing the original prompt)
-            if prompt in generated_text:
-                response_text = generated_text[len(prompt) :].strip()
-            else:
-                response_text = generated_text.strip()
-
-            # Create response in the format expected by smolagents
-            return {"role": "assistant", "content": response_text}
-
-        except Exception as e:
-            print(f"Error in model generation: {str(e)}")
-            return {
-                "role": "assistant",
-                "content": f"I apologize, but I encountered an error processing your request: {str(e)}",
-            }
-
-    def _format_messages_as_prompt(self, messages):
-        prompt = ""
-        for message in messages:
-            role = message["role"]
-            content = message["content"]
-
-            if role == "system":
-                prompt += f"System: {content}\n\n"
-            elif role == "user":
-                prompt += f"User: {content}\n\n"
-            elif role == "assistant":
-                prompt += f"Assistant: {content}\n\n"
-            else:
-                prompt += f"{role.capitalize()}: {content}\n\n"
-
-        prompt += "Assistant: "
-        return prompt
 
 
 web_search = GoogleSearchTool(provider="serper")
@@ -180,39 +83,34 @@ os.makedirs(f"./{BROWSER_CONFIG['downloads_folder']}", exist_ok=True)
 
 # Define Model Choices
 MODEL_CHOICES = [
-    "LOCAL_MODEL:jan-hq/Qwen3-14B-v0.1-deepresearch-100-step",  # Added local model option
+    "VLLM_LOCAL:jan-hq/Qwen3-14B-v0.1-deepresearch-100-step",  # Local vLLM server model
     "openrouter/qwen/qwen3-30b-a3b",
     "openrouter/google/gemini-2.5-flash-preview",
     "openrouter/qwen/qwen3-32b",
     "openrouter/qwen/qwen3-235b-a22b",
 ]
-DEFAULT_MODEL = MODEL_CHOICES[0]  # Set local model as default
+DEFAULT_MODEL = MODEL_CHOICES[0]  # Set local vLLM model as default
 
 text_limit = 20000
 browser = SimpleTextBrowser(**BROWSER_CONFIG)
-
-# Store local model instance to avoid reloading
-local_model_cache = {}
-
 
 # Agent creation in a factory function
 def create_agent(selected_model_id: str):
     """Creates a fresh agent instance for each session with the selected model"""
     print(f"Creating agent with model: {selected_model_id}")
 
-    # Check if this is a local model request
-    if selected_model_id.startswith("LOCAL_MODEL:"):
+    # Check if this is a local vLLM model request
+    if selected_model_id.startswith("VLLM_LOCAL:"):
         model_path = selected_model_id.split(":", 1)[1]
-        print(f"Using local model at {model_path}")
-
-        # Use cached model if available
-        if model_path not in local_model_cache:
-            local_model_cache[model_path] = LocalQwenModelWrapper(
-                model_id=model_path,
-                custom_role_conversions=custom_role_conversions,
-            )
-
-        dynamic_model = local_model_cache[model_path]
+        print(f"Using local vLLM server model: {model_path}")
+        print("Connecting to local vLLM server at http://localhost:8000/v1/")
+        
+        dynamic_model = OpenAIServerModel(
+            model_id=model_path,
+            api_base="http://localhost:8000/v1/",  # Local vLLM server URL
+            api_key="EMPTY",  # vLLM uses "EMPTY" as the default API key
+            custom_role_conversions=custom_role_conversions,
+        )
     else:
         # Use API model
         dynamic_model = LiteLLMModel(
@@ -388,13 +286,9 @@ class GradioUI:
                     ):
                         file_uploads_log = gr.State([])
                         with gr.Sidebar():
-                            gr.Markdown("""# open Deep Research - free the AI agents!
-                            
-                OpenAI just published [Deep Research](https://openai.com/index/introducing-deep-research/), an amazing assistant that can perform deep searches on the web to answer user questions.
-                
-                However, their agent has a huge downside: it's not open. So we've started a 24-hour rush to replicate and open-source it. Our resulting [open-Deep-Research agent](https://github.com/huggingface/smolagents/tree/main/examples/open_deep_research) took the #1 rank of any open submission on the GAIA leaderboard! ✨
-                
-                You can try a simplified version here that uses `Qwen-Coder-32B` instead of `o1`.<br><br>""")
+                            gr.Markdown("""# Menlo Deep Research Demo
+
+AI research assistant that can perform deep searches on the web to answer user questions.<br><br>""")
 
                             model_selector = gr.Dropdown(
                                 choices=MODEL_CHOICES,
@@ -438,7 +332,7 @@ class GradioUI:
                         session_state = gr.State({})  # Initialize empty state for each session
                         stored_messages = gr.State([])
                         chatbot = gr.Chatbot(
-                            label="open-Deep-Research",
+                            label="Menlo Deep Research",
                             type="messages",
                             avatar_images=(
                                 None,
@@ -495,20 +389,15 @@ class GradioUI:
                     with gr.Blocks(
                         fill_height=True,
                     ):
-                        gr.Markdown("""# open Deep Research - free the AI agents!
-            _Built with [smolagents](https://github.com/huggingface/smolagents)_
-            
-            OpenAI just published [Deep Research](https://openai.com/index/introducing-deep-research/), a very nice assistant that can perform deep searches on the web to answer user questions.
-            
-            However, their agent has a huge downside: it's not open. So we've started a 24-hour rush to replicate and open-source it. Our resulting [open-Deep-Research agent](https://github.com/huggingface/smolagents/tree/main/examples/open_deep_research) took the #1 rank of any open submission on the GAIA leaderboard! ✨
-            
-            You can try a simplified version below (uses `Qwen-Coder-32B` instead of `o1`, so much less powerful than the original open-Deep-Research)👇""")
+                        gr.Markdown("""# Menlo Deep Research Demo
+
+AI research assistant that can perform deep searches on the web to answer user questions.""")
                         # Add session state to store session-specific data
                         session_state = gr.State({})  # Initialize empty state for each session
                         stored_messages = gr.State([])
                         file_uploads_log = gr.State([])
                         chatbot = gr.Chatbot(
-                            label="open-Deep-Research",
+                            label="Menlo Deep Research",
                             type="messages",
                             avatar_images=(
                                 None,

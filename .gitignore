@@ -6,6 +6,10 @@ batch_outputs/
 downloads_folder/
 .venv*
 cookies.py
+temp_model/
+gguf_output/
+logs/
+llama.cpp*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
