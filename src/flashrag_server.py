@@ -2,7 +2,6 @@
 RAG Server 
 """
 
-import os
 import json
 import logging
 import argparse
@@ -20,7 +19,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import AutoConfig, AutoTokenizer, AutoModel, HfArgumentParser
+from transformers import AutoConfig, AutoTokenizer, AutoModel
 from sentence_transformers import CrossEncoder
 from tqdm import tqdm
 from collections import defaultdict

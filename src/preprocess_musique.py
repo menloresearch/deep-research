@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from datasets import Dataset
-from huggingface_hub import HfApi, login
+from huggingface_hub import login
 
 
 def transform_musique_data(input_path: str, sample_config: dict, hf_repo_id: str, token: str = None) -> None:

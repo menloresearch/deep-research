@@ -1,9 +1,8 @@
 import os
 import faiss
-import json
 import warnings
 import numpy as np
-from typing import cast, List, Dict
+from typing import cast
 import shutil
 import subprocess
 import argparse
@@ -11,7 +10,6 @@ import torch
 from tqdm import tqdm
 import datasets
 from transformers import AutoTokenizer, AutoModel, AutoConfig
-import os
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "1"

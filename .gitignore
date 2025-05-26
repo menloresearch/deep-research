@@ -1,3 +1,16 @@
+file_uploads/
+.gradio/
+output/
+data/
+batch_outputs/
+downloads_folder/
+.venv*
+cookies.py
+temp_model/
+gguf_output/
+logs/
+llama.cpp*
+
 # Local development files
 .vscode/
 data/
