@@ -58,6 +58,7 @@ dependencies = [
     "gdown>=5.2.0",
     "jsonlines>=4.0.0",
     "deepspeed",
+    "flashrag-dev[full]>=0.1.2",
 ]
 
 [tool.ruff]

@@ -1,10 +1,10 @@
-corpus_file=/home/jovyan/visual-thinker-workspace/deep-research/data/processed/corpus.jsonl # jsonl
-save_dir=index_musique_db
+corpus_file=data/index_musique_db/corpus.jsonl # jsonl
+save_dir=data/index_musique_db
 retriever_name=e5 # this is for indexing naming
 retriever_model=intfloat/e5-base-v2
 
 echo "Starting FlashRAG server..."
-python flashrag_server.py \
+python src/flashrag_server.py \
     --index_path $save_dir/${retriever_name}_Flat.index \
     --corpus_path $corpus_file \
     --retrieval_topk 15 \

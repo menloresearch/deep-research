@@ -10,6 +10,7 @@ temp_model/
 gguf_output/
 logs/
 llama.cpp*
+wandb/
 
 # Local development files
 .vscode/

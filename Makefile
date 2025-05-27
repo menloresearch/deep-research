@@ -124,9 +124,15 @@ upload-checkpoint:
 ## Start vLLM server
 .PHONY: serve-vllm
 serve-vllm:
-	@echo "Starting vLLM server using scripts/run_vllm_server.sh..."
-	@echo "You can customize by setting environment variables like CUDA_VISIBLE_DEVICES, VLLM_MODEL, VLLM_TP_SIZE, etc."
-	PYTHONPATH=. bash scripts/run_vllm_server.sh &
+	@echo "Starting vLLM server for Qwen/Qwen3-1.7B..."
+	CUDA_VISIBLE_DEVICES=0,1,2,3 python verifiers-deepresearch/verifiers/inference/vllm_serve.py \
+		--model 'Qwen/Qwen3-1.7B' \
+		--tensor_parallel_size 4 \
+		--max_model_len 8192 \
+		--dtype bfloat16 \
+		--gpu_memory_utilization 0.9 \
+		--host localhost \
+		--port 8000 &
 
 ## Start all services
 .PHONY: serve-all
@@ -147,8 +153,8 @@ serve-simple:
 ## Start flashrag retriever
 .PHONY: serve-flashrag
 serve-flashrag:
-	@echo "Starting flashrag retriever using scripts/run_flashrag_server.sh..."
-	PYTHONPATH=. bash scripts/run_flashrag_server.sh &
+	@echo "Starting flashrag retriever using src/rag_server.sh..."
+	PYTHONPATH=. bash src/rag_server.sh &
 
 ## Start sandbox environment
 .PHONY: serve-sandbox
@@ -183,6 +189,17 @@ stop-all:
 .PHONY: kill-all-services-nodocker
 kill-all-services-nodocker: stop-all
 	@echo "All services stopped in non-docker mode"
+
+## Kill all GPU processes and clear memory
+.PHONY: kill-gpus
+kill-gpus:
+	@echo "Killing all Python processes and clearing GPU memory..."
+	@pkill -f python || true
+	@sleep 2
+	@pkill -9 -f python || true
+	@sleep 1
+	@python -c "import torch; torch.cuda.empty_cache()" || true
+	@echo "GPU processes killed and memory cleared."
 
 #################################################################################
 # DOCKER                                                                        #

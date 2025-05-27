@@ -4,8 +4,8 @@ from collections import deque
 from typing import List, Tuple, Union
 
 from fastapi import FastAPI, HTTPException
-from flashrag.config import Config
-from flashrag.utils import get_retriever
+from flashrag_dev.config import Config
+from flashrag_dev.utils import get_retriever
 from pydantic import BaseModel
 
 from src.config import RETRIEVER_SERVER_PORT

@@ -86,45 +86,23 @@ content = visit_site("doc_1")
 
 ### Training with Enhanced RAG
 
-The training script `verifiers-deepresearch/verifiers/examples/trl_deepresearch_search_visit_site_offline.py` demonstrates how to train models with the new search and visit capabilities.
+1. **Kill GPU processes and clear memory:**
 
-To run this training script:
+```bash
+make kill-gpus
+```
 
-1. **Prerequisite (if using default settings):** The script's `GRPOConfig` defaults to `use_vllm=True`, which requires a separate vLLM server for inference during training. You'll need to start one. Example (adapt model, GPU settings, and paths as needed from your project root):
+2. **Start vLLM server:**
 
-    ```bash
-    # Example: Start vLLM server (e.g., on GPUs 0-1 for Qwen3-4B model, matching script's default)
-    # The script 'verifiers-deepresearch/verifiers/inference/vllm_serve.py' is assumed to exist.
-    CUDA_VISIBLE_DEVICES=0,1 python verifiers-deepresearch/verifiers/inference/vllm_serve.py --model 'Qwen/Qwen3-4B' \
-        --tensor_parallel_size 2 --max_model_len 8192 --dtype bfloat16 \
-        --gpu_memory_utilization 0.9 --enable_prefix_caching True \
-        --host 0.0.0.0 --port 8000
-    ```
+```bash
+make serve-vllm
+```
 
-    Adjust the vLLM server settings (the script defaults to using model `Qwen/Qwen3-4B`, port `8000`, and host `0.0.0.0`). These are configured in `training_args` within `trl_deepresearch_search_visit_site_offline.py`.
-    If you don't intend to use a vLLM server, you can modify the script to set `use_vllm=False` in `GRPOConfig`.
+3. **Run training script:**
 
-2. **Run the training script:**
-
-    - **Single Process / Single GPU:**
-
-        ```bash
-        # Example: Run training on GPU 2 (ensure CUDA_VISIBLE_DEVICES is set appropriately)
-        CUDA_VISIBLE_DEVICES=2 python verifiers-deepresearch/verifiers/examples/trl_deepresearch_search_visit_site_offline.py
-        ```
-
-    - **Multi-GPU (using Hugging Face Accelerate):**
-        First, ensure `accelerate` is configured (run `accelerate config` if you haven't). Then, launch the script. Example for 2 GPUs (e.g., GPUs 2-3):
-
-        ```bash
-        # Example: Launch training on GPUs 2-3 using 2 processes
-        # The 'path/to/your/accelerate_config.yaml' should be your actual accelerate config file.
-        # An example like 'configs/zero3.yaml' is mentioned in the script's comments, assuming it's at your project root.
-        CUDA_VISIBLE_DEVICES=2,3 accelerate launch --num_processes 2 --config_file path/to/your/accelerate_config.yaml \
-            verifiers-deepresearch/verifiers/examples/trl_deepresearch_search_visit_site_offline.py
-        ```
-
-        Adjust `CUDA_VISIBLE_DEVICES`, `--num_processes`, and other `accelerate launch` arguments according to your hardware and Accelerate configuration.
+```bash
+CUDA_VISIBLE_DEVICES=4,5,6,7 accelerate launch --multi_gpu --num_processes 4 --config_file configs/zero3.json verifiers-deepresearch/verifiers/examples/trl_deepresearch_search_visit_site_offline.py
+```
 
 For detailed documentation, see [SEARCH_VISIT_README.md](verifiers-deepresearch/SEARCH_VISIT_README.md).
 
