@@ -1,5 +1,7 @@
 # Shamelessly stolen from Microsoft Autogen team: thanks to them for this great resource!
 # https://github.com/microsoft/autogen/blob/gaia_multiagent_v01_march_1st/autogen/browser_utils.py
+import http.client
+import json
 import mimetypes
 import os
 import pathlib
@@ -11,6 +13,7 @@ from urllib.parse import unquote, urljoin, urlparse
 
 import pathvalidate
 import requests
+from dotenv import load_dotenv
 from serpapi.google_search import GoogleSearch
 from smolagents import Tool
 
@@ -560,3 +563,53 @@ class FindNextTool(Tool):
             return header.strip() + "\n=======================\nThe search string was not found on this page."
         else:
             return header.strip() + "\n=======================\n" + content
+
+
+class VisitToolSerperAPI(Tool):
+    name = "visit_page_serper"
+    description = "Visit a webpage using Serper API and return its text content."
+    inputs = {"url": {"type": "string", "description": "The url of the webpage to visit."}}
+    output_type = "string"
+
+    def __init__(self, browser):
+        super().__init__()
+        self.browser = browser
+        load_dotenv()
+        self.api_key = os.getenv("SERPER_API_KEY")
+        if not self.api_key:
+            raise ValueError("SERPER_API_KEY not found in environment variables")
+
+    def forward(self, url: str) -> str:
+        conn = http.client.HTTPSConnection("scrape.serper.dev")
+        payload = json.dumps({"url": url})
+        headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
+
+        try:
+            conn.request("POST", "/", payload, headers)
+            res = conn.getresponse()
+            data = json.loads(res.read().decode("utf-8"))
+
+            if "text" in data:
+                self.browser._set_page_content(data["text"])
+                header, content = self.browser._state()
+                return header.strip() + "\n=======================\n" + content
+            else:
+                return f"Error: Could not extract text from {url}"
+
+        except Exception as e:
+            return f"Error accessing {url}: {str(e)}"
+        finally:
+            conn.close()
+
+
+if __name__ == "__main__":
+    browser = SimpleTextBrowser()
+    serper_tool = VisitToolSerperAPI(browser)
+
+    # Test URL
+    test_url = "https://example.com"
+    print(f"Testing Serper API with {test_url}...")
+
+    result = serper_tool.forward(test_url)
+    print("\nResult:")
+    print(result)

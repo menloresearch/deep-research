@@ -3,10 +3,9 @@ import csv
 import os
 import re
 import sys  # Import sys for exiting
-from dotenv import load_dotenv
 
-from openai import OpenAI
-from openai import AuthenticationError, APIError, RateLimitError # Import specific exceptions
+from dotenv import load_dotenv
+from openai import APIError, AuthenticationError, OpenAI, RateLimitError  # Import specific exceptions
 
 load_dotenv(override=True)
 
@@ -97,6 +96,7 @@ ERROR_NO_API_KEY = "ERROR_NO_API_KEY"
 ERROR_API_CALL_FAILED = "ERROR_API_CALL_FAILED"
 ERROR_UNEXPECTED_LLM_RESPONSE = "ERROR_UNEXPECTED_LLM_RESPONSE"
 
+
 def clean_predicted_answer(text: str) -> str:
     """Removes common prefixes from the predicted answer."""
     if text.startswith("**Final answer:**\n"):
@@ -143,7 +143,7 @@ def call_llm_grader(question: str, target: str, predicted_answer: str) -> str:
         if llm_response_content:
             return llm_response_content.strip()
         else:
-             # LLM returned empty content - treat as an unexpected response
+            # LLM returned empty content - treat as an unexpected response
             return ERROR_UNEXPECTED_LLM_RESPONSE
     except (AuthenticationError, APIError, RateLimitError) as e:
         # Specific OpenAI/OpenRouter errors
@@ -175,12 +175,12 @@ def process_row(row_dict: dict[str, str]) -> dict[str, str]:
 
     if not question or not gold_answer:
         # Cannot grade if essential info is missing in the input data
-        grade_letter = "C" # Map missing input to NOT_ATTEMPTED
+        grade_letter = "C"  # Map missing input to NOT_ATTEMPTED
         grade_description = "Input Missing Essential Data (Q/A)"
         # print(f"Warning: Missing question or gold_answer for a row. Grading as NOT_ATTEMPTED.", file=sys.stderr) # Avoid flooding stdout/stderr in parallel
     elif not cleaned_predicted_answer:
         # If predicted answer is empty after cleaning
-        grade_letter = "C" # Map empty prediction to NOT_ATTEMPTED
+        grade_letter = "C"  # Map empty prediction to NOT_ATTEMPTED
         grade_description = "Predicted Answer Empty"
         # print(f"Warning: Empty predicted answer for question: '{question[:50]}...'. Grading as NOT_ATTEMPTED.", file=sys.stderr) # Avoid flooding stdout/stderr in parallel
     else:
@@ -196,20 +196,26 @@ def process_row(row_dict: dict[str, str]) -> dict[str, str]:
             grade_letter = "ERROR"
             grade_description = "LLM API Call Failed"
         elif llm_raw_response == ERROR_UNEXPECTED_LLM_RESPONSE:
-             grade_letter = "ERROR"
-             grade_description = "LLM Returned Unexpected/Empty Response"
-             print(f"Warning: LLM returned unexpected/empty content for question '{question[:50]}...'. Original LLM response: '{llm_raw_response}'. Marking as ERROR.", file=sys.stderr)
+            grade_letter = "ERROR"
+            grade_description = "LLM Returned Unexpected/Empty Response"
+            print(
+                f"Warning: LLM returned unexpected/empty content for question '{question[:50]}...'. Original LLM response: '{llm_raw_response}'. Marking as ERROR.",
+                file=sys.stderr,
+            )
         else:
             # Attempt to match expected A, B, or C
             match = re.search(r"\b(A|B|C)\b", llm_raw_response)
             if match:
                 grade_letter = match.group(0)
-                grade_description = CHOICE_LETTER_TO_STRING.get(grade_letter, "UNKNOWN_GRADE") # Should not be UNKNOWN
+                grade_description = CHOICE_LETTER_TO_STRING.get(grade_letter, "UNKNOWN_GRADE")  # Should not be UNKNOWN
             else:
                 # LLM response was not one of the specific errors, but also not A, B, or C
                 grade_letter = "ERROR"
                 grade_description = "LLM Did Not Return A/B/C"
-                print(f"Warning: LLM returned unexpected response format for question '{question[:50]}...'. Original LLM response: '{llm_raw_response}'. Marking as ERROR.", file=sys.stderr)
+                print(
+                    f"Warning: LLM returned unexpected response format for question '{question[:50]}...'. Original LLM response: '{llm_raw_response}'. Marking as ERROR.",
+                    file=sys.stderr,
+                )
 
     # --- Prepare Output Row ---
     output_row = row_dict.copy()
@@ -219,15 +225,13 @@ def process_row(row_dict: dict[str, str]) -> dict[str, str]:
 
 
 def main():
-
-
     # Hardcoded input path based on your provided output
-    input_csv_path = "simpleqa_432_simpleqa_14b_deepresearch_v0.1.csv"
-    output_csv_path = "graded_simpleqa_432_simpleqa_14b_deepresearch_v0.1.csv"
+    input_csv_path = "simpleqa_432_simpleqa_14b_deepresearch_v0.2_200s.csv"
+    output_csv_path = "graded_simpleqa_432_simpleqa_14b_deepresearch_v0.2_200s.csv"
 
     if not os.path.exists(input_csv_path):
         print(f"Error: Input CSV file not found at {input_csv_path}", file=sys.stderr)
-        sys.exit(1) # Exit if input file is missing
+        sys.exit(1)  # Exit if input file is missing
 
     rows_to_process: list[dict[str, str]] = []
     fieldnames_from_reader: list[str] = []
@@ -237,51 +241,51 @@ def main():
             if reader.fieldnames:
                 fieldnames_from_reader = list(reader.fieldnames)
             else:
-                fieldnames_from_reader = [] # Handles case of empty file or no headers
+                fieldnames_from_reader = []  # Handles case of empty file or no headers
             for row in reader:
                 rows_to_process.append(row)
     except Exception as e:
         print(f"Error reading input CSV {input_csv_path}: {e}", file=sys.stderr)
-        sys.exit(1) # Exit on file read error
+        sys.exit(1)  # Exit on file read error
 
     total_rows = len(rows_to_process)
     if not total_rows:
-        if not fieldnames_from_reader: # Truly empty file (no headers, no rows)
+        if not fieldnames_from_reader:  # Truly empty file (no headers, no rows)
             print(f"Input CSV file {input_csv_path} is empty or has no headers. Nothing to process.")
-        else: # File has headers but no data rows
+        else:  # File has headers but no data rows
             print(f"No data rows found in {input_csv_path} (only headers). Nothing to process.")
-        return # Exit if no data to process
+        return  # Exit if no data to process
 
     print(f"Starting grading for {total_rows} rows...")
 
-    results: list[dict[str, str]] = [] # Use a list, append results in order
+    results: list[dict[str, str]] = []  # Use a list, append results in order
     num_workers = 8
-    processed_count = 0 # Counter for processed rows
-    error_occurred_critical = False # Flag for critical errors like API key missing
+    processed_count = 0  # Counter for processed rows
+    error_occurred_critical = False  # Flag for critical errors like API key missing
 
     # Using list comprehension to get futures and maintain original order
     futures = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-         # Store futures along with their original index
+        # Store futures along with their original index
         futures = [(executor.submit(process_row, row), i) for i, row in enumerate(rows_to_process)]
 
         # Collect results in order
         for future, original_index in futures:
             try:
                 processed_row_data = future.result()
-                results.append(processed_row_data) # Append results as they complete, but process in order later
+                results.append(processed_row_data)  # Append results as they complete, but process in order later
                 # Check for critical errors returned by process_row
                 if processed_row_data.get("grade_description") == "No API Key Configured":
-                     print("\nCritical Error: API Key is not configured. Stopping processing.", file=sys.stderr)
-                     error_occurred_critical = True
-                     # In ProcessPoolExecutor with as_completed, it's hard to stop gracefully
-                     # We'll just mark the flag and handle it after the loop
+                    print("\nCritical Error: API Key is not configured. Stopping processing.", file=sys.stderr)
+                    error_occurred_critical = True
+                    # In ProcessPoolExecutor with as_completed, it's hard to stop gracefully
+                    # We'll just mark the flag and handle it after the loop
             except Exception as exc:
                 print(f"\nError processing row index {original_index}: {exc}", file=sys.stderr)
                 error_row = rows_to_process[original_index].copy()
                 error_row["grade_letter"] = "ERROR"
                 error_row["grade_description"] = f"Processing Error: {exc}"
-                results.append(error_row) # Add error result
+                results.append(error_row)  # Add error result
             finally:
                 processed_count += 1
                 # Print progress, using \r to overwrite the line for a cleaner output
@@ -301,17 +305,17 @@ def main():
 
     # Re-doing the result collection using a list of fixed size to ensure order
     results: list[dict[str, str] | None] = [None] * total_rows
-    futures = {} # Reset futures dictionary for ordered collection
+    futures = {}  # Reset futures dictionary for ordered collection
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-         # Submit tasks
-         for i, row in enumerate(rows_to_process):
-             futures[executor.submit(process_row, row)] = i
+        # Submit tasks
+        for i, row in enumerate(rows_to_process):
+            futures[executor.submit(process_row, row)] = i
 
-         processed_count = 0
-         error_occurred_critical = False
+        processed_count = 0
+        error_occurred_critical = False
 
-         # Collect results as they complete, placing them in the results list by index
-         for future in concurrent.futures.as_completed(futures):
+        # Collect results as they complete, placing them in the results list by index
+        for future in concurrent.futures.as_completed(futures):
             original_index = futures[future]
             try:
                 processed_row_data = future.result()
@@ -319,16 +323,19 @@ def main():
 
                 # Check for critical errors returned by process_row
                 if processed_row_data and processed_row_data.get("grade_description") == "No API Key Configured":
-                     print("\nCritical Error: API Key is not configured. Stopping submission of *new* tasks.", file=sys.stderr)
-                     error_occurred_critical = True
-                     # Cancel remaining pending futures (doesn't guarantee immediate stop)
-                     for f in futures:
-                         if not f.done():
-                             f.cancel()
+                    print(
+                        "\nCritical Error: API Key is not configured. Stopping submission of *new* tasks.",
+                        file=sys.stderr,
+                    )
+                    error_occurred_critical = True
+                    # Cancel remaining pending futures (doesn't guarantee immediate stop)
+                    for f in futures:
+                        if not f.done():
+                            f.cancel()
 
             except concurrent.futures.CancelledError:
                 # Handle cancelled futures gracefully
-                pass # Just ignore cancelled tasks; they are already marked as None in results
+                pass  # Just ignore cancelled tasks; they are already marked as None in results
 
             except Exception as exc:
                 print(f"\nError processing row index {original_index}: {exc}", file=sys.stderr)
@@ -343,9 +350,8 @@ def main():
                 # Check the flag before printing progress
                 if not error_occurred_critical:
                     print(f"Processed {processed_count} / {total_rows} rows...", end="\r")
-                elif processed_count % 10 == 0: # Print progress less frequently after critical error
-                     print(f"Processed {processed_count} / {total_rows} rows (processing remaining tasks)...", end="\r")
-
+                elif processed_count % 10 == 0:  # Print progress less frequently after critical error
+                    print(f"Processed {processed_count} / {total_rows} rows (processing remaining tasks)...", end="\r")
 
     # Print a newline after the progress indicator loop finishes
     print("\nAll processing attempted.")
@@ -354,8 +360,10 @@ def main():
     final_results: list[dict[str, str]] = [res for res in results if res is not None]
 
     if len(final_results) != total_rows:
-         print(f"Warning: Expected {total_rows} results, but got {len(final_results)}. Some tasks may have failed or been cancelled unexpectedly.", file=sys.stderr)
-
+        print(
+            f"Warning: Expected {total_rows} results, but got {len(final_results)}. Some tasks may have failed or been cancelled unexpectedly.",
+            file=sys.stderr,
+        )
 
     # Print results to console (optional, but helps see what happened)
     print("\n--- Graded Results Summary ---")
@@ -364,7 +372,7 @@ def main():
     for row in final_results:
         grade = row.get("grade_description", "UNKNOWN")
         if grade == "CORRECT" or grade == "INCORRECT" or grade == "NOT_ATTEMPTED":
-             grade_counts[grade] = grade_counts.get(grade, 0) + 1
+            grade_counts[grade] = grade_counts.get(grade, 0) + 1
         else:
             # This is an error state
             error_counts[grade] = error_counts.get(grade, 0) + 1
@@ -383,7 +391,6 @@ def main():
         print("No results were processed.")
     print("--- End of Graded Results Summary ---\n")
 
-
     # --- Write to Output CSV ---
     # Determine output fieldnames: Start with input headers, add grade columns
     output_fieldnames: list[str]
@@ -395,7 +402,7 @@ def main():
     else:
         # No headers and no results (should have been caught earlier)
         print("Cannot determine output CSV headers: No source headers and no processed data.", file=sys.stderr)
-        return # Exit if cannot determine headers
+        return  # Exit if cannot determine headers
 
     # Ensure grade columns are in the output headers
     if "grade_letter" not in output_fieldnames:
@@ -408,18 +415,17 @@ def main():
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir, exist_ok=True)
 
-
     try:
         with open(output_csv_path, "w", newline="", encoding="utf-8") as outfile:
             writer = csv.DictWriter(outfile, fieldnames=output_fieldnames)
             writer.writeheader()
-            writer.writerows(final_results) # Write the collected results
+            writer.writerows(final_results)  # Write the collected results
 
         print(f"Successfully processed {len(final_results)} rows. Output saved to {output_csv_path}")
 
     except Exception as e:
         print(f"Error writing output CSV {output_csv_path}: {e}", file=sys.stderr)
-        sys.exit(1) # Exit on output file write error
+        sys.exit(1)  # Exit on output file write error
 
     # Exit with a non-zero status if critical errors occurred
     if error_occurred_critical:
