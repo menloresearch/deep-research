@@ -16,6 +16,7 @@ import requests
 from dotenv import load_dotenv
 from serpapi.google_search import GoogleSearch
 from smolagents import Tool
+from tavily import TavilyClient
 
 from .cookies import COOKIES
 from .mdconvert import FileConversionException, MarkdownConverter, UnsupportedFormatException
@@ -602,14 +603,98 @@ class VisitToolSerperAPI(Tool):
             conn.close()
 
 
-if __name__ == "__main__":
-    browser = SimpleTextBrowser()
-    serper_tool = VisitToolSerperAPI(browser)
+class VisitToolTavily(Tool):
+    name = "visit_page_tavily"
+    description = "Visit a webpage using Tavily API and return its text content."
+    inputs = {"url": {"type": "string", "description": "The url of the webpage to visit."}}
+    output_type = "string"
 
-    # Test URL
-    test_url = "https://example.com"
-    print(f"Testing Serper API with {test_url}...")
+    def __init__(self, browser):
+        super().__init__()
+        self.browser = browser
+        load_dotenv()
+        self.api_key = os.getenv("TAVILY_API_KEY")
+        if not self.api_key:
+            raise ValueError("TAVILY_API_KEY not found in environment variables")
 
-    result = serper_tool.forward(test_url)
-    print("\nResult:")
-    print(result)
+        self.client = TavilyClient(self.api_key)
+
+    def forward(self, url: str) -> str:
+        try:
+            response = self.client.extract(urls=[url], extract_depth="advanced")
+
+            if response and "results" in response and len(response["results"]) > 0:
+                result = response["results"][0]
+                if "raw_content" in result:
+                    self.browser._set_page_content(result["raw_content"])
+                    header, content = self.browser._state()
+                    return header.strip() + "\n=======================\n" + content
+                elif "failed_results" in response and len(response["failed_results"]) > 0:
+                    return f"Error: Failed to extract content from {url}. Reason: {response['failed_results'][0]}"
+                else:
+                    return f"Error: No content found for {url}"
+            else:
+                return f"Error: Could not extract text from {url}"
+
+        except Exception as e:
+            return f"Error accessing {url}: {str(e)}"
+
+
+class SearchToolTavily(Tool):
+    name = "web_search"
+    description = (
+        """Performs a web search using Tavily API for your query then returns a string of the top search results."""
+    )
+    inputs = {
+        "query": {"type": "string", "description": "The search query to perform."},
+        "filter_year": {
+            "type": "integer",
+            "description": "Optionally restrict results to a certain year",
+            "nullable": True,
+        },
+    }
+    output_type = "string"
+
+    def __init__(self):
+        super().__init__()
+        import os
+
+        from dotenv import load_dotenv
+        from tavily import TavilyClient
+
+        load_dotenv()
+        self.api_key = os.getenv("TAVILY_API_KEY")
+        if not self.api_key:
+            raise ValueError("TAVILY_API_KEY not found in environment variables")
+        self.client = TavilyClient(self.api_key)
+
+    def forward(self, query: str, filter_year: Optional[int] = None) -> str:
+        try:
+            response = self.client.search(
+                query=query,
+                search_depth="advanced",
+                max_results=5,
+            )
+
+            if "results" not in response or not response["results"]:
+                year_filter_message = f" with filter year={filter_year}" if filter_year is not None else ""
+                return f"No results found for '{query}'{year_filter_message}. Try with a more general query, or remove the year filter."
+
+            web_snippets = []
+            for idx, result in enumerate(response["results"]):
+                # Extract content and clean it up
+                content = result.get("content", "").strip()
+                if not content:
+                    continue
+
+                # Format the result
+                redacted_version = f"{idx + 1}. [{result['title']}]({result['url']})\n{content}"
+                web_snippets.append(redacted_version)
+
+            if not web_snippets:
+                return f"No results found for '{query}'"
+
+            return "## Search Results\n" + "\n\n".join(web_snippets)
+
+        except Exception as e:
+            raise ValueError(f"Error performing Tavily search: {str(e)}")

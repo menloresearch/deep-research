@@ -45,3 +45,4 @@ uvloop>=0.21.0
 setuptools>=80.8.0
 openai
 pandas
+tavily-python
