@@ -301,15 +301,16 @@ class GradioUI:
         return "Desktop"
 
     def process_csv_file(self, input_csv_file_obj, progress=gr.Progress(track_tqdm=True)):
+        import datetime
+        import os
+        import re
+        import threading
+
         if input_csv_file_obj is None:
             gr.Warning("No CSV file provided for batch processing.")
             return None
 
         input_file_path = input_csv_file_obj.name
-        all_output_rows = []
-        batch_files = []
-        batch_size = 10
-
         try:
             df = pd.read_csv(input_file_path, keep_default_na=False)
             if "query" not in df.columns:
@@ -334,6 +335,21 @@ class GradioUI:
 
             # Ensure batch_outputs folder exists
             os.makedirs(self.batch_output_folder, exist_ok=True)
+
+            # Create datetime-prefixed output filename
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            original_filename_base = os.path.splitext(os.path.basename(input_file_path))[0]
+            safe_filename_base = re.sub(r"[^\w\-\.]", "_", original_filename_base)[:100]
+            output_filename = f"{timestamp}_{safe_filename_base}_processed.csv"
+            output_file_path = os.path.join(self.batch_output_folder, output_filename)
+
+            # Open the output file at the start
+            csv_output_file = open(output_file_path, "w", newline="", encoding="utf-8")
+            csv_writer = csv.DictWriter(csv_output_file, fieldnames=output_fieldnames, extrasaction="ignore")
+            csv_writer.writeheader()
+
+            # Create a lock for writing to the CSV file
+            csv_write_lock = threading.Lock()
 
             def process_row(row_data_with_index):
                 idx, row_data = row_data_with_index
@@ -361,84 +377,39 @@ class GradioUI:
 
                 except Exception as e:
                     final_answer_text = f"Error processing query '{str(query_text)[:50]}...': {str(e)}"
-                    # Optionally log detailed error to console here if needed
-
                 current_output_row["answer"] = final_answer_text
                 return current_output_row, idx
 
             # Use ThreadPoolExecutor for parallel processing
-            # We add original index to manage progress and sort later if necessary, though order isn't strictly required by problem
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-                # Store futures to retrieve results in order of submission if needed, or just process as completed
                 future_to_row_index = {
                     executor.submit(process_row, (i, input_row_dicts[i])): i for i in range(total_queries)
                 }
 
-                processed_rows_dict = {}  # To store results with their original index
-
                 for i, future in enumerate(concurrent.futures.as_completed(future_to_row_index)):
                     original_idx = future_to_row_index[future]
                     try:
-                        processed_row_data, _ = (
-                            future.result()
-                        )  # We get back original_idx but don't strictly need it here
-                        processed_rows_dict[original_idx] = processed_row_data
+                        processed_row_data, _ = future.result()
+                        with csv_write_lock:
+                            # Ensure keys are str for csv writer
+                            row_to_write = {str(k): v for k, v in processed_row_data.items()}
+                            csv_writer.writerow(row_to_write)
+                            csv_output_file.flush()
                     except Exception as exc:
-                        # Handle exceptions from the process_row function itself
                         failed_row_data = input_row_dicts[original_idx].copy()
                         failed_row_data["answer"] = f"Failed to process row due to: {exc}"
-                        processed_rows_dict[original_idx] = failed_row_data
-
+                        with csv_write_lock:
+                            row_to_write = {str(k): v for k, v in failed_row_data.items()}
+                            csv_writer.writerow(row_to_write)
+                            csv_output_file.flush()
                     progress(
                         (i + 1) / total_queries,
-                        desc=f"Processing row {i + 1}/{total_queries}",
+                        desc=f"Processing row {i + 1}/{total_queries} - Saving to {output_filename}",
                     )
 
-            # Reconstruct all_output_rows in the original order
-            all_output_rows = [processed_rows_dict[i] for i in range(total_queries) if i in processed_rows_dict]
-
-            # Save in batches
-            original_filename_base = os.path.splitext(os.path.basename(input_file_path))[0]
-            for i in range(0, len(all_output_rows), batch_size):
-                batch_data = all_output_rows[i : i + batch_size]
-                batch_file_num = (i // batch_size) + 1
-                batch_filename = f"{original_filename_base}_batch_{batch_file_num}.csv"
-                batch_file_path = os.path.join(self.batch_output_folder, batch_filename)
-
-                try:
-                    with open(batch_file_path, "w", newline="", encoding="utf-8") as csvfile:
-                        writer = csv.DictWriter(csvfile, fieldnames=output_fieldnames, extrasaction="ignore")
-                        writer.writeheader()
-                        writer.writerows(batch_data)
-                    batch_files.append(batch_file_path)
-                except Exception as e:
-                    gr.Warning(f"Error writing batch CSV {batch_file_path}: {str(e)}")
-                    # Continue to next batch or handle error as needed
-
-            if not batch_files:
-                gr.Warning("No batch files were generated.")
-                return None
-
-            if len(batch_files) == 1:
-                gr.Info(f"Processing complete. Output saved to {batch_files[0]}")
-                return batch_files[0]
-            else:
-                # Zip the batch files
-                zip_filename = f"results_{original_filename_base}.zip"
-                zip_file_path = os.path.join(self.batch_output_folder, zip_filename)
-                with zipfile.ZipFile(zip_file_path, "w") as zf:
-                    for bf_path in batch_files:
-                        zf.write(bf_path, os.path.basename(bf_path))
-
-                # Optionally, clean up individual batch CSVs after zipping
-                # for bf_path in batch_files:
-                #     try:
-                #         os.remove(bf_path)
-                #     except OSError:
-                #         pass # Ignore if removal fails
-
-                gr.Info(f"Processing complete. All batches zipped into {zip_file_path}")
-                return zip_file_path
+            csv_output_file.close()
+            gr.Info(f"Processing complete. Output saved to {output_file_path}")
+            return output_file_path
 
         except pd.errors.EmptyDataError:
             gr.Error("The uploaded CSV file is empty or not valid.")
@@ -446,6 +417,8 @@ class GradioUI:
         except Exception as e:
             gr.Error(f"Error reading or processing CSV: {str(e)}")
             print(f"Detailed error during CSV processing: {e}")
+            if "csv_output_file" in locals() and not csv_output_file.closed:
+                csv_output_file.close()
             return None
 
     def launch(self, **kwargs):
