@@ -46,3 +46,8 @@ setuptools>=80.8.0
 openai
 pandas
 tavily-python
+langchain
+langchain-community
+langchain-core
+langchain-openai
+rapidfuzz
