@@ -1,0 +1,3 @@
+[submodule "verifiers-deepresearch"]
+	path = verifiers-deepresearch
+	url = https://github.com/menloresearch/verifiers-deepresearch.git
