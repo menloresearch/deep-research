@@ -1,5 +1,5 @@
-corpus_file=index_musique_db/corpus.jsonl # jsonl
-save_dir=index_musique_db
+corpus_file=../index_musique_db/corpus.jsonl # jsonl
+save_dir=../index_musique_db
 retriever_name=e5 # this is for indexing naming
 retriever_model=intfloat/e5-base-v2
 
@@ -10,7 +10,7 @@ python flashrag_server.py \
     --retrieval_topk 15 \
     --retriever_name $retriever_name \
     --retriever_model $retriever_model \
-    --reranking_topk 5 \
+    --reranking_topk 10 \
     --reranker_model "cross-encoder/ms-marco-MiniLM-L12-v2" \
     --reranker_batch_size 64 \
     --host "0.0.0.0" \
