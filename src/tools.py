@@ -1,6 +1,7 @@
 # src/tools.py
 from abc import ABC, abstractmethod
 from typing import Any, Optional
+import json
 
 from .config import (
     BEGIN_CLICK_LINK,
@@ -11,7 +12,13 @@ from .config import (
     END_SEARCH,
     END_WEB_SEARCH,
     END_WRITE_SECTION,
-    logger,
+    BEGIN_GENERATE_OUTLINE,
+    END_GENERATE_OUTLINE,
+    BEGIN_GENERATE_TABLE,
+    END_GENERATE_TABLE,
+    BEGIN_EVALUATE_CONTENT,
+    END_EVALUATE_CONTENT,
+    logger
 )
 from .knowledge_base import simple_rag_search
 from .prompts import format_search_results_for_llm
@@ -181,6 +188,222 @@ class WriteSectionTool(Tool):
         return f"{BEGIN_WRITE_SECTION}Section Name: [Your Section Title]\nTask: [Detailed description of what to write in this section, including key points or questions to address. Refer to previously gathered information if necessary.]{END_WRITE_SECTION}"
 
 
+# --- Generate Outline Tool ---
+class GenerateOutlineTool(Tool):
+    def __init__(self):
+        super().__init__(
+            name="generate_outline",
+            description="Generates a structured outline based on research results and context. Use this to organize information into a logical structure.",
+        )
+
+    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+        # Args can be a string or dict containing research results and context
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                return "Error: Invalid JSON format for outline generation arguments."
+
+        research_results = args.get("research_results", {})
+        context = args.get("context", {})
+        
+        logger.info(f"GenerateOutlineTool executing with context: {context.get('main_topic', '')}")
+        
+        try:
+            # Create a prompt for generating the outline
+            prompt = f"""
+            Based on the following research results and context, generate an appropriate outline structure.
+            
+            Main Topic: {context.get('main_topic', '')}
+            Key Aspects: {', '.join(context.get('aspects', [])[:3])}
+            
+            Research Results Summary:
+            {json.dumps(research_results, indent=2)}
+            
+            Generate a JSON array of strings, where each string is a main topic or subtopic.
+            The outline should:
+            1. Focus on answering the main query
+            2. Be comprehensive yet concise
+            3. Flow logically
+            4. Include only relevant sections
+            
+            Return ONLY the JSON array of strings.
+            """
+            
+            # Use the LLM client from the context if available
+            llm_client = full_context.get("llm_client") if full_context else None
+            if not llm_client:
+                return "Error: LLM client not available for outline generation."
+            
+            response = llm_client.completion(
+                [{"role": "user", "content": prompt}],
+                stream=False
+            )
+            
+            # Extract and parse the JSON response
+            json_str = response['text'].strip()
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0].strip()
+            
+            outline = json.loads(json_str)
+            return json.dumps(outline, indent=2)
+            
+        except Exception as e:
+            logger.error(f"GenerateOutlineTool error: {e}", exc_info=True)
+            return f"Error generating outline: {str(e)}"
+
+    def get_schema(self) -> str:
+        return f"{BEGIN_GENERATE_OUTLINE}Research Results: [JSON object with research results]\nContext: [JSON object with main topic and aspects]{END_GENERATE_OUTLINE}"
+
+
+# --- Generate Table Tool ---
+class GenerateTableTool(Tool):
+    def __init__(self):
+        super().__init__(
+            name="generate_table",
+            description="Generates an HTML table that best represents the given content. Use this to present information in a structured, tabular format.",
+        )
+
+    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+        # Args can be a string or dict containing content and outline
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                return "Error: Invalid JSON format for table generation arguments."
+
+        outline = args.get("outline", [])
+        content = args.get("content", {})
+        
+        logger.info(f"GenerateTableTool executing for outline with {len(outline)} items")
+        
+        try:
+            # Create a prompt for generating the table
+            prompt = f"""
+            Based on the following outline and content, generate an appropriate HTML table.
+            
+            Outline:
+            {json.dumps(outline, indent=2)}
+            
+            Content:
+            {json.dumps(content, indent=2)}
+            
+            Generate an HTML table that:
+            1. Best represents the information structure
+            2. Is well-formatted and readable
+            3. Includes all relevant information
+            4. Uses appropriate HTML styling
+            
+            Return ONLY the HTML table code.
+            """
+            
+            # Use the LLM client from the context if available
+            llm_client = full_context.get("llm_client") if full_context else None
+            if not llm_client:
+                return "Error: LLM client not available for table generation."
+            
+            response = llm_client.completion(
+                [{"role": "user", "content": prompt}],
+                stream=False
+            )
+            
+            # Extract the HTML table
+            html_str = response['text'].strip()
+            if "```html" in html_str:
+                html_str = html_str.split("```html")[1].split("```")[0].strip()
+            elif "```" in html_str:
+                html_str = html_str.split("```")[1].split("```")[0].strip()
+            
+            return html_str
+            
+        except Exception as e:
+            logger.error(f"GenerateTableTool error: {e}", exc_info=True)
+            return f"Error generating table: {str(e)}"
+
+    def get_schema(self) -> str:
+        return f"{BEGIN_GENERATE_TABLE}Outline: [JSON array of outline items]\nContent: [JSON object with content for each outline item]{END_GENERATE_TABLE}"
+
+
+# --- Evaluate Content Tool ---
+class EvaluateContentTool(Tool):
+    def __init__(self):
+        super().__init__(
+            name="evaluate_content",
+            description="Evaluates content quality and identifies issues or areas for improvement. Use this to ensure high-quality, well-structured content.",
+        )
+
+    def execute(self, args: str | dict[str, Any], full_context: Optional[dict] = None) -> str:
+        # Args can be a string or dict containing content and context
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                return "Error: Invalid JSON format for content evaluation arguments."
+
+        content = args.get("content", "")
+        context = args.get("context", {})
+        section = args.get("section", "")
+        
+        logger.info(f"EvaluateContentTool executing for section: {section}")
+        
+        try:
+            # Create a prompt for evaluating the content
+            prompt = f"""
+            Evaluate the following content for the section "{section}" and identify issues or areas for improvement.
+            
+            Content:
+            {content}
+            
+            Context:
+            - Main Topic: {context.get('main_topic', '')}
+            - Aspects: {context.get('aspects', '')}
+            
+            Evaluate if the content has any of the following issues:
+            1. Misalignment with the section topic
+            2. Misalignment with the main topic and aspects
+            3. Lack of depth or comprehensiveness
+            4. Inconsistencies or contradictions
+            5. Unsupported claims
+            6. Poor organization or structure
+            7. Lack of clarity or readability
+            8. Missing important information
+            9. Inappropriate tone or style
+            10. Missing citations
+            
+            Return a JSON array of strings, where each string describes a specific issue.
+            Maximum of 5 issues only.
+            """
+            
+            # Use the LLM client from the context if available
+            llm_client = full_context.get("llm_client") if full_context else None
+            if not llm_client:
+                return "Error: LLM client not available for content evaluation."
+            
+            response = llm_client.completion(
+                [{"role": "user", "content": prompt}],
+                stream=False
+            )
+            
+            # Extract and parse the JSON response
+            json_str = response['text'].strip()
+            if "```json" in json_str:
+                json_str = json_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in json_str:
+                json_str = json_str.split("```")[1].split("```")[0].strip()
+            
+            issues = json.loads(json_str)
+            return json.dumps(issues, indent=2)
+            
+        except Exception as e:
+            logger.error(f"EvaluateContentTool error: {e}", exc_info=True)
+            return f"Error evaluating content: {str(e)}"
+
+    def get_schema(self) -> str:
+        return f"{BEGIN_EVALUATE_CONTENT}Section: [Section name]\nContent: [Content to evaluate]\nContext: [JSON object with main topic and aspects]{END_EVALUATE_CONTENT}"
+
+
 # --- Tool Registry & Getter ---
 # Using a dictionary that maps tool names (as used in LLM prompts) to their classes
 AVAILABLE_TOOLS_CLASSES: dict[str, type[Tool]] = {
@@ -188,6 +411,9 @@ AVAILABLE_TOOLS_CLASSES: dict[str, type[Tool]] = {
     "web_search": WebSearchTool,
     "click_link": ClickAndFetchTool,
     "write_section": WriteSectionTool,
+    "generate_outline": GenerateOutlineTool,
+    "generate_table": GenerateTableTool,
+    "evaluate_content": EvaluateContentTool,
 }
 
 

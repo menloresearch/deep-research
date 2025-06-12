@@ -81,12 +81,18 @@ INFORMATION_END = "</information>"
 
 BEGIN_WEB_SEARCH = "<web_search>"
 END_WEB_SEARCH = "</web_search>"
-BEGIN_CLICK_LINK = "<|begin_click_link|>"
-END_CLICK_LINK = "<|end_click_link|>"
+BEGIN_CLICK_LINK = "<click_link>"
+END_CLICK_LINK = "</click_link>"
 BEGIN_CLICK_RESULT = "<|begin_click_result|>"
 END_CLICK_RESULT = "<|end_click_result|>"
-BEGIN_WRITE_SECTION = "<|begin_write_section|>"
-END_WRITE_SECTION = "<|end_write_section|>"
+BEGIN_WRITE_SECTION = "<write_section>"
+END_WRITE_SECTION = "</write_section>"
+BEGIN_GENERATE_OUTLINE = "<generate_outline>"
+END_GENERATE_OUTLINE = "</generate_outline>"
+BEGIN_GENERATE_TABLE = "<generate_table>"
+END_GENERATE_TABLE = "</generate_table>"
+BEGIN_EVALUATE_CONTENT = "<evaluate_content>"
+END_EVALUATE_CONTENT = "</evaluate_content>"
 # Add other tokens if needed: BEGIN_EDIT_ARTICLE, BEGIN_CHECK_ARTICLE, BEGIN_SEARCH_RESULT etc.
 
 # API Keys (from .env)
@@ -99,7 +105,7 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # For OpenRouter
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # Default LLM and Agent Configuration
-DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "qwen/qwen3-32b")  # Changed default
+DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "gpt-4o-mini")  # Changed default
 DEFAULT_EMBEDDING_MODEL = os.getenv("DEFAULT_EMBEDDING_MODEL", "intfloat/e5-base-v2")
 MAX_CONTEXT_LENGTH_LLM = int(os.getenv("MAX_CONTEXT_LENGTH_LLM", 32768))
 MAX_GENERATION_TOKENS = int(os.getenv("MAX_GENERATION_TOKENS", 1024))

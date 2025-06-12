@@ -37,6 +37,12 @@ def parse_agent_action(response_text: str) -> Optional[Tuple[str, str]]:
         END_CLICK_LINK,
         END_SEARCH,
         END_WRITE_SECTION,
+        BEGIN_GENERATE_OUTLINE,
+        END_GENERATE_OUTLINE,
+        BEGIN_GENERATE_TABLE,
+        END_GENERATE_TABLE,
+        BEGIN_EVALUATE_CONTENT,
+        END_EVALUATE_CONTENT,
         # Add other primary action tags here
     )
 
@@ -45,6 +51,9 @@ def parse_agent_action(response_text: str) -> Optional[Tuple[str, str]]:
         "answer": (BEGIN_ANSWER, END_ANSWER),
         "click_link": (BEGIN_CLICK_LINK, END_CLICK_LINK),
         "write_section": (BEGIN_WRITE_SECTION, END_WRITE_SECTION),
+        "generate_outline": (BEGIN_GENERATE_OUTLINE, END_GENERATE_OUTLINE), 
+        "generate_table": (BEGIN_GENERATE_TABLE, END_GENERATE_TABLE),
+        "evaluate_content": (BEGIN_EVALUATE_CONTENT, END_EVALUATE_CONTENT),
         # Add more tools that are invoked as primary actions
     }
 
