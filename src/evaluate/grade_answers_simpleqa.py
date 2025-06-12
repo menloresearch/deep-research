@@ -1,3 +1,4 @@
+import argparse
 import concurrent.futures
 import csv
 import os
@@ -224,10 +225,78 @@ def process_row(row_dict: dict[str, str]) -> dict[str, str]:
     return output_row
 
 
+def parse_arguments():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Grade predicted answers in a CSV file using an LLM grader.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python script.py input.csv output.csv
+  python script.py data/questions.csv results/graded_questions.csv
+  python script.py --input input.csv --output output.csv
+        """
+    )
+    
+    parser.add_argument(
+        "input_file",
+        nargs="?",
+        help="Path to the input CSV file containing questions and answers"
+    )
+    
+    parser.add_argument(
+        "output_file", 
+        nargs="?",
+        help="Path for the output CSV file with graded results"
+    )
+    
+    parser.add_argument(
+        "--input", "-i",
+        dest="input_file_flag",
+        help="Input CSV file path (alternative to positional argument)"
+    )
+    
+    parser.add_argument(
+        "--output", "-o", 
+        dest="output_file_flag",
+        help="Output CSV file path (alternative to positional argument)"
+    )
+    
+    parser.add_argument(
+        "--workers", "-w",
+        type=int,
+        default=8,
+        help="Number of worker processes to use (default: 8)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine input and output files (prefer positional args over flags)
+    input_file = args.input_file or args.input_file_flag
+    output_file = args.output_file or args.output_file_flag
+    
+    if not input_file:
+        print("Error: Input file path is required.", file=sys.stderr)
+        print("Use: python script.py <input_file> <output_file>", file=sys.stderr)
+        print("Or: python script.py --input <input_file> --output <output_file>", file=sys.stderr)
+        sys.exit(1)
+        
+    if not output_file:
+        print("Error: Output file path is required.", file=sys.stderr)
+        print("Use: python script.py <input_file> <output_file>", file=sys.stderr)
+        print("Or: python script.py --input <input_file> --output <output_file>", file=sys.stderr)
+        sys.exit(1)
+    
+    return input_file, output_file, args.workers
+
+
 def main():
-    # Hardcoded input path based on your provided output
-    input_csv_path = "simpleqa_432_simpleqa_14b_deepresearch_v0.2_200s.csv"
-    output_csv_path = "graded_simpleqa_432_simpleqa_14b_deepresearch_v0.2_200s.csv"
+    # Parse command line arguments
+    input_csv_path, output_csv_path, num_workers = parse_arguments()
+    
+    print(f"Input file: {input_csv_path}")
+    print(f"Output file: {output_csv_path}")
+    print(f"Workers: {num_workers}")
 
     if not os.path.exists(input_csv_path):
         print(f"Error: Input CSV file not found at {input_csv_path}", file=sys.stderr)
@@ -257,51 +326,6 @@ def main():
         return  # Exit if no data to process
 
     print(f"Starting grading for {total_rows} rows...")
-
-    results: list[dict[str, str]] = []  # Use a list, append results in order
-    num_workers = 8
-    processed_count = 0  # Counter for processed rows
-    error_occurred_critical = False  # Flag for critical errors like API key missing
-
-    # Using list comprehension to get futures and maintain original order
-    futures = []
-    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
-        # Store futures along with their original index
-        futures = [(executor.submit(process_row, row), i) for i, row in enumerate(rows_to_process)]
-
-        # Collect results in order
-        for future, original_index in futures:
-            try:
-                processed_row_data = future.result()
-                results.append(processed_row_data)  # Append results as they complete, but process in order later
-                # Check for critical errors returned by process_row
-                if processed_row_data.get("grade_description") == "No API Key Configured":
-                    print("\nCritical Error: API Key is not configured. Stopping processing.", file=sys.stderr)
-                    error_occurred_critical = True
-                    # In ProcessPoolExecutor with as_completed, it's hard to stop gracefully
-                    # We'll just mark the flag and handle it after the loop
-            except Exception as exc:
-                print(f"\nError processing row index {original_index}: {exc}", file=sys.stderr)
-                error_row = rows_to_process[original_index].copy()
-                error_row["grade_letter"] = "ERROR"
-                error_row["grade_description"] = f"Processing Error: {exc}"
-                results.append(error_row)  # Add error result
-            finally:
-                processed_count += 1
-                # Print progress, using \r to overwrite the line for a cleaner output
-                # Check the flag before printing progress to avoid clobbering critical error message
-                if not error_occurred_critical:
-                    print(f"Processed {processed_count} / {total_rows} rows...", end="\r")
-
-    # Print a newline after the progress indicator loop finishes (if not already done by critical error)
-    if not error_occurred_critical:
-        print("\nAll rows submitted to workers.")
-
-    # Wait for all results to be collected (already done by iterating through futures)
-    # Sort results by original index if necessary (appending might keep a mixed order depending on completion time)
-    # Let's sort the results list based on the original index if we appended them in a mixed order
-    # A better way might be to collect results into a list of size total_rows and place them by index
-    # Let's revise the result collection slightly.
 
     # Re-doing the result collection using a list of fixed size to ensure order
     results: list[dict[str, str] | None] = [None] * total_rows
@@ -381,6 +405,9 @@ def main():
         print("Standard Grades:")
         for grade, count in grade_counts.items():
             print(f"  {grade}: {count}")
+        if total_rows > 0:
+            percentage_correct = (grade_counts['CORRECT'] / total_rows) * 100
+            print(f"\nPercentage Correct: {percentage_correct:.1f}% ({grade_counts['CORRECT']}/{total_rows})")
 
     if error_counts:
         print("\nError Summary:")
