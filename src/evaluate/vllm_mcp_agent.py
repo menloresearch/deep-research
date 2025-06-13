@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Flexible vLLM + MCP Research Agent Script (Retry-Enhanced Version)
-Usage: python vllm_mcp_agent.py --csv path/to/input.csv --model_id your/model --base_url http://localhost:8000/v1
+Usage: python vllm_mcp_agent.py --csv path/to/input.csv --model_id your/model --base_url http://localhost:8000/v1 --api_key your-api-key
 """
 
 import argparse
@@ -40,7 +40,7 @@ shutdown_requested = False
 class VLLMMCPResearchAgent:
     """Research agent using vLLM + MCP + LangChain stack with retry mechanism."""
     
-    def __init__(self, model_id: str, base_url: str, temperature: float = 0.7, 
+    def __init__(self, model_id: str, base_url: str, api_key: str, temperature: float = 0.7, 
                  max_tokens: Optional[int] = None, 
                  mcp_server_url: str = "http://127.0.0.1:8000/mcp",
                  initial_timeout: float = 60.0,
@@ -55,6 +55,7 @@ class VLLMMCPResearchAgent:
         Args:
             model_id: Model identifier (e.g., "microsoft/Phi-3-mini-4k-instruct")
             base_url: Base URL for the vLLM server (e.g., "http://localhost:8000/v1")
+            api_key: API key for authentication
             temperature: Sampling temperature (0.0 to 2.0)
             max_tokens: Maximum tokens to generate
             mcp_server_url: URL for MCP server
@@ -67,6 +68,7 @@ class VLLMMCPResearchAgent:
         """
         self.model_id = model_id
         self.base_url = base_url
+        self.api_key = api_key
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.mcp_server_url = mcp_server_url
@@ -100,6 +102,7 @@ class VLLMMCPResearchAgent:
             try:
                 logger.info(f"Initializing vLLM chat model (attempt {attempt + 1}/{max_init_retries}): {self.model_id}")
                 logger.info(f"Base URL: {self.base_url}")
+                logger.info(f"API Key: {'***' + self.api_key[-4:] if len(self.api_key) > 4 else '***'}")
                 logger.info(f"Temperature: {self.temperature}")
                 logger.info(f"Initial timeout: {self.initial_timeout}s, Max retries: {self.max_retries}")
                 
@@ -119,11 +122,11 @@ class VLLMMCPResearchAgent:
                 if self.max_tokens:
                     model_kwargs["max_tokens"] = self.max_tokens
                 
-                # Initialize chat model pointing to vLLM server
+                # Initialize chat model pointing to vLLM server with provided API key
                 self.chat_model = init_chat_model(
                     model=self.model_id,
                     base_url=self.base_url,
-                    api_key="your-key",
+                    api_key=self.api_key,
                     model_kwargs=model_kwargs,
                 )
                 
@@ -664,16 +667,20 @@ def parse_arguments():
         epilog="""
 Examples:
   # Basic usage with retry
-  python vllm_mcp_agent.py --csv queries.csv --model_id microsoft/Phi-3-mini-4k-instruct --base_url http://localhost:8000/v1
+  python vllm_mcp_agent.py --csv queries.csv --model_id microsoft/Phi-3-mini-4k-instruct --base_url http://localhost:8000/v1 --api_key your-api-key
+
+  # Using environment variable for API key
+  export API_KEY="your-api-key"
+  python vllm_mcp_agent.py --csv queries.csv --model_id microsoft/Phi-3-mini-4k-instruct --base_url http://localhost:8000/v1 --api_key $API_KEY
 
   # Custom retry configuration
-  python vllm_mcp_agent.py --csv data.csv --model_id llama2-7b --base_url http://localhost:8000/v1 --initial_timeout 30 --max_retries 5 --max_timeout 300
+  python vllm_mcp_agent.py --csv data.csv --model_id llama2-7b --base_url http://localhost:8000/v1 --api_key your-key --initial_timeout 30 --max_retries 5 --max_timeout 300
 
   # Conservative settings for slow server
-  python vllm_mcp_agent.py --csv data.csv --model_id your-model --base_url http://localhost:8000/v1 --initial_timeout 120 --max_retries 2 --max_concurrent 1
+  python vllm_mcp_agent.py --csv data.csv --model_id your-model --base_url http://localhost:8000/v1 --api_key your-key --initial_timeout 120 --max_retries 2 --max_concurrent 1
 
   # Test mode
-  python vllm_mcp_agent.py --test --model_id your-model --base_url http://localhost:8000/v1 --query "Test query here"
+  python vllm_mcp_agent.py --test --model_id your-model --base_url http://localhost:8000/v1 --api_key your-key --query "Test query here"
         """
     )
     
@@ -683,6 +690,8 @@ Examples:
                        help="Model identifier (e.g., microsoft/Phi-3-mini-4k-instruct)")
     parser.add_argument("--base_url", type=str, required=True,
                        help="Base URL for vLLM server (e.g., http://localhost:8000/v1)")
+    parser.add_argument("--api_key", type=str, default="your-key",
+                       help="API key for authentication (can also be set via OPENAI_API_KEY env var)")
     
     # Model parameters
     parser.add_argument("--temperature", type=float, default=0.7,
@@ -740,6 +749,11 @@ def main():
         print("Error: --csv is required for batch processing (or use --test for test mode)")
         sys.exit(1)
     
+    # Handle API key from environment if not provided
+    api_key = args.api_key
+    if not api_key:
+        api_key = os.getenv("OPENAI_API_KEY")
+
     # Setup logging
     global logger
     logger = setup_logging(args.log_dir, args.model_id)
@@ -747,6 +761,7 @@ def main():
     logger.info("=== Starting vLLM + MCP Research Agent (Retry-Enhanced Version) ===")
     logger.info(f"Model ID: {args.model_id}")
     logger.info(f"Base URL: {args.base_url}")
+    logger.info(f"API Key: {'***' + api_key[-4:] if len(api_key) > 4 else '***'}")
     logger.info(f"Temperature: {args.temperature}")
     logger.info(f"Max tokens: {args.max_tokens}")
     logger.info(f"Retry config: initial_timeout={args.initial_timeout}s, max_retries={args.max_retries}")
@@ -765,10 +780,11 @@ def main():
         print(f"Error with model_kwargs: {e}")
         sys.exit(1)
     
-    # Create agent with retry parameters
+    # Create agent with retry parameters and API key
     agent = VLLMMCPResearchAgent(
         model_id=args.model_id,
         base_url=args.base_url,
+        api_key=api_key,
         temperature=args.temperature,
         max_tokens=args.max_tokens,
         mcp_server_url=args.mcp_server_url,
