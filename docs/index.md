@@ -11,6 +11,8 @@ title: Welcome to Jan Nano Docs
   <img src="https://cdn-uploads.huggingface.co/production/uploads/65713d70f56f9538679e5a56/wC7Xtolp7HOFIdKTOJhVt.png" width="300" alt="Jan-Nano">
 </div>
 
+**We spent on the money on GPU - so here is a blank HTML docs page.**
+
 ## Overview
 
 Jan-Nano is a compact 4-billion parameter language model specifically designed and trained for deep research tasks. This model has been optimized to work seamlessly with Model Context Protocol (MCP) servers, enabling efficient integration with various research tools and data sources.
