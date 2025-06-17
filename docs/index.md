@@ -34,18 +34,14 @@ Jan-Nano is supported by [Jan](https://github.com/menloresearch/jan), an open-so
     - Latest CUDA drivers
     - RTX 30/40 series or newer
 
-## Quick Start
+## Setup Guidelines
+
+### Quick Start
 
 1. Install [Jan Beta](https://jan.ai/docs/desktop/beta)
-2. Download Jan-Nano from Hugging Face:
-   - [Model Repository](https://huggingface.co/Menlo/Jan-nano)
-   - [GGUF Versions](https://huggingface.co/Menlo/Jan-nano-gguf)
-3. Setup in Jan:
-   - Go to Settings -> Model Provider -> llama.cpp
-   - Add Jan-Nano model
-   - Select appropriate quantization
-
-## Setup Guidelines
+2. Download Jan-Nano from Hub
+![Quick Start](assets/quick-start.excalidraw.png)
+3. Start new chat with Jan-Nano
 
 ### MCP Server (Serper) Setup
 
