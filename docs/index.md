@@ -46,7 +46,7 @@ Jan-Nano is supported by [Jan](https://github.com/menloresearch/jan), an open-so
 ### MCP Server (Serper) Setup
 
 - Recommended: [Serper MCP Server](https://github.com/marcopesani/mcp-server-serper)
-- Requirements: Node.js ≥ 18, Serper API key ([get your API key here](https://serper.dev/api-key))
+- Requirements: Node.js ≥ 18, Serper API key ([get your API key here](https://serper.dev/))
 
 ### Using with Jan
 
